@@ -54,6 +54,26 @@ function isRuleActiveOnDate(
     if (dateISO > rule.valor_termino) return false
   }
 
+  if (rule.modo_termino === 'ocorrencias' && rule.valor_termino) {
+    const maxOcorrencias = parseInt(rule.valor_termino, 10)
+    const parts = rule.data_inicio.split('-').map(Number)
+    const inicioYear  = parts[0]
+    const inicioMonth = parts[1] - 1  // 0-indexed
+    const inicioDay   = parts[2]
+
+    // First firing month: same month if dia_do_mes >= data_inicio day, else next month
+    let firstYear  = inicioYear
+    let firstMonth = inicioMonth
+    if (rule.dia_do_mes < inicioDay) {
+      firstMonth++
+      if (firstMonth >= 12) { firstMonth = 0; firstYear++ }
+    }
+
+    // Occurrence number for this (year, month) — both 0-indexed month
+    const occurrenceNumber = (year - firstYear) * 12 + (month - firstMonth) + 1
+    if (occurrenceNumber < 1 || occurrenceNumber > maxOcorrencias) return false
+  }
+
   switch (rule.frequencia) {
     case 'mensal':
       return day === rule.dia_do_mes
@@ -98,8 +118,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
     const N = daysInMonth(year, month)
     const saldoAbertura = saldo
 
-    const budget = dailyBudgets.find(b => b.mes_referencia === label)
-    const valorMensalDiario = budget?.valor_mensal ?? 0
+    const valorMensalDiario = dailyBudgets.reduce((sum, b) => sum + b.valor_mensal, 0)
     const diarioPorDia = valorMensalDiario > 0 ? valorMensalDiario / N : 0
 
     let totalEntradas = 0

@@ -33,7 +33,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
 
   const [startIndex,   setStartIndex]   = useState(todayMonthIdx)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [mode,         setMode]         = useState<Mode>('entrada')
+  const [mode,         setMode]         = useState<Mode>('diario')
 
   const visibleMonths = months.slice(startIndex, startIndex + VISIBLE)
 

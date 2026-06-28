@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { addTransaction, addRecurringRule } from '@/app/actions'
 
-type Mode = 'avulsa' | 'recorrente'
-type Frequencia = 'mensal' | 'quinzenal' | 'semanal'
+type Mode     = 'avulsa' | 'recorrente'
+type Duracao  = 'nunca' | 'ocorrencias'
 
 interface Props {
   tipo: 'entrada' | 'saida'
@@ -16,14 +16,15 @@ interface Props {
 
 export default function AddTransactionModal({ tipo, onClose, defaultDate }: Props) {
   const router = useRouter()
-  const today = new Date().toISOString().split('T')[0]
+  const today  = new Date().toISOString().split('T')[0]
 
   const [mode,       setMode]       = useState<Mode>('avulsa')
   const [descricao,  setDescricao]  = useState('')
   const [valor,      setValor]      = useState('')
   const [data,       setData]       = useState(defaultDate ?? today)
-  const [frequencia, setFrequencia] = useState<Frequencia>('mensal')
-  const [diaDoMes,   setDiaDoMes]   = useState('5')
+  const [diaDoMes,   setDiaDoMes]   = useState('')
+  const [duracao,    setDuracao]    = useState<Duracao>('nunca')
+  const [ocorrencias, setOcorrencias] = useState(12)
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [success,    setSuccess]    = useState(false)
@@ -33,14 +34,24 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
     setLoading(true)
     setError(null)
 
+    if (mode === 'recorrente') {
+      console.log('[recorrente] submit payload:', {
+        duracao,
+        ocorrencias,
+        modo_termino: duracao,
+        valor_termino: duracao === 'ocorrencias' ? String(ocorrencias) : null,
+      })
+    }
+
     const result = mode === 'avulsa'
       ? await addTransaction({ tipo, valor: Number(valor), descricao, data })
       : await addRecurringRule({
           tipo,
-          valor:      Number(valor),
+          valor:         Number(valor),
           descricao,
-          frequencia,
-          dia_do_mes: frequencia === 'semanal' ? 1 : Number(diaDoMes),
+          dia_do_mes:    Number(diaDoMes),
+          modo_termino:  duracao,
+          valor_termino: duracao === 'ocorrencias' ? String(ocorrencias) : null,
         })
 
     setLoading(false)
@@ -128,7 +139,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
               />
             </div>
 
-            {/* Campos condicionais */}
+            {/* Avulsa: data */}
             {mode === 'avulsa' && (
               <div>
                 <label className={labelClass}>Data</label>
@@ -142,35 +153,82 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
               </div>
             )}
 
+            {/* Recorrente: dia + duração */}
             {mode === 'recorrente' && (
-              <div className="grid grid-cols-2 gap-3">
+              <>
                 <div>
-                  <label className={labelClass}>Frequência</label>
-                  <select
-                    value={frequencia}
-                    onChange={e => setFrequencia(e.target.value as Frequencia)}
-                    className={`${fieldClass} cursor-pointer`}
-                  >
-                    <option value="mensal">Mensal</option>
-                    <option value="quinzenal">Quinzenal</option>
-                    <option value="semanal">Semanal</option>
-                  </select>
+                  <label className={labelClass}>Dia do mês</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="31"
+                    value={diaDoMes}
+                    onChange={e => setDiaDoMes(e.target.value)}
+                    placeholder="Ex: 5"
+                    className={fieldClass}
+                  />
                 </div>
-                {frequencia === 'mensal' && (
-                  <div>
-                    <label className={labelClass}>Dia do mês</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      max="31"
-                      value={diaDoMes}
-                      onChange={e => setDiaDoMes(e.target.value)}
-                      className={fieldClass}
-                    />
+
+                {/* Duração */}
+                <div>
+                  <p className={labelClass}>Duração</p>
+                  <div className="flex flex-col gap-2">
+                    {/* Indefinidamente */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="duracao"
+                        checked={duracao === 'nunca'}
+                        onChange={() => setDuracao('nunca')}
+                        className="accent-accent"
+                      />
+                      <span className="text-sm text-text">Indefinidamente</span>
+                    </label>
+
+                    {/* Número de vezes */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="duracao"
+                        checked={duracao === 'ocorrencias'}
+                        onChange={() => setDuracao('ocorrencias')}
+                        className="accent-accent"
+                      />
+                      <span className="text-sm text-text">Número de vezes</span>
+                    </label>
+
+                    {duracao === 'ocorrencias' && (
+                      <div className="flex items-center gap-2 ml-6">
+                        <button
+                          type="button"
+                          onClick={() => setOcorrencias(n => Math.max(2, n - 1))}
+                          disabled={ocorrencias <= 2}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-sm text-text-2 hover:bg-surface-2 disabled:opacity-40 transition-colors"
+                        >−</button>
+                        <input
+                          type="number"
+                          min="2"
+                          max="100"
+                          value={ocorrencias}
+                          onChange={e => {
+                            const v = Number(e.target.value)
+                            if (v >= 2 && v <= 100) setOcorrencias(v)
+                          }}
+                          className="w-14 text-center border border-border rounded-lg px-1 py-1 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setOcorrencias(n => Math.min(100, n + 1))}
+                          disabled={ocorrencias >= 100}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-sm text-text-2 hover:bg-surface-2 disabled:opacity-40 transition-colors"
+                        >+</button>
+                        <span className="text-xs text-text-3">meses</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              </>
             )}
 
             {error && <p className="text-xs text-red">{error}</p>}

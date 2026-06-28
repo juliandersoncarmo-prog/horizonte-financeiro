@@ -9,7 +9,6 @@ import {
   integer,
   timestamp,
   index,
-  unique,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -67,7 +66,7 @@ export const recurringRulesTable = pgTable('recurring_rules', {
 export const dailyBudgetsTable = pgTable('daily_budgets', {
   id:             uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   user_id:        uuid('user_id').notNull(),
-  mes_referencia: text('mes_referencia').notNull(),
+  mes_referencia: text('mes_referencia'),
   descricao:      text('descricao').notNull(),
   categoria:      text('categoria').notNull(),
   valor_mensal:   numeric('valor_mensal', { precision: 15, scale: 2 }).notNull(),
@@ -75,8 +74,6 @@ export const dailyBudgetsTable = pgTable('daily_budgets', {
   updated_at:     timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('daily_budgets_user_id_idx').on(t.user_id),
-  index('daily_budgets_mes_referencia_idx').on(t.mes_referencia),
-  unique('daily_budgets_user_mes_uniq').on(t.user_id, t.mes_referencia),
 ])
 
 // ─── Inferred types ───────────────────────────────────────────────────────────

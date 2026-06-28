@@ -143,8 +143,9 @@ export async function addRecurringRule(formData: {
   tipo: 'entrada' | 'saida'
   valor: number
   descricao: string
-  frequencia: 'mensal' | 'quinzenal' | 'semanal'
   dia_do_mes: number
+  modo_termino: 'nunca' | 'ocorrencias'
+  valor_termino: string | null
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createServiceClient()
@@ -155,10 +156,11 @@ export async function addRecurringRule(formData: {
       valor:        formData.valor,
       descricao:    formData.descricao,
       categoria:    '',
-      frequencia:   formData.frequencia,
+      frequencia:   'mensal',
       dia_do_mes:   formData.dia_do_mes,
       data_inicio:  today,
-      modo_termino: 'nunca',
+      modo_termino: formData.modo_termino,
+      valor_termino: formData.valor_termino,
       ativo:        true,
     })
     if (error) return { success: false, error: error.message }
@@ -166,6 +168,27 @@ export async function addRecurringRule(formData: {
     return { success: true }
   } catch (err) {
     console.error('addRecurringRule error:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+export async function saveSettings(dados: {
+  saldo_abertura: number
+  data_ancora: string
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServiceClient()
+    const { error } = await supabase
+      .from('settings')
+      .upsert(
+        { user_id: TEST_USER_ID, saldo_abertura: dados.saldo_abertura, data_ancora: dados.data_ancora },
+        { onConflict: 'user_id' },
+      )
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/')
+    return { success: true }
+  } catch (err) {
+    console.error('saveSettings error:', err)
     return { success: false, error: String(err) }
   }
 }
@@ -187,20 +210,73 @@ export async function resetAllData(): Promise<{ success: boolean; error?: string
   }
 }
 
+export async function getAllDailyBudgets(): Promise<{
+  id: string; descricao: string; categoria: string; valor_mensal: number
+}[]> {
+  try {
+    const supabase = createServiceClient()
+    const { data, error } = await supabase
+      .from('daily_budgets')
+      .select('id, descricao, categoria, valor_mensal')
+      .eq('user_id', TEST_USER_ID)
+      .order('created_at', { ascending: true })
+    if (error) return []
+    return (data ?? []).map(b => ({
+      id: b.id,
+      descricao: b.descricao,
+      categoria: b.categoria,
+      valor_mensal: Number(b.valor_mensal),
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function deleteDailyBudget(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServiceClient()
+    const { error } = await supabase
+      .from('daily_budgets')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', TEST_USER_ID)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/')
+    return { success: true }
+  } catch (err) {
+    console.error('deleteDailyBudget error:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+export async function updateDailyBudget(id: string, valorMensal: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServiceClient()
+    const { error } = await supabase
+      .from('daily_budgets')
+      .update({ valor_mensal: valorMensal })
+      .eq('id', id)
+      .eq('user_id', TEST_USER_ID)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/')
+    return { success: true }
+  } catch (err) {
+    console.error('updateDailyBudget error:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 export async function addDailyBudget(formData: {
   descricao: string
-  categoria: string
   valor_mensal: number
-  mes_referencia: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createServiceClient()
     const { error } = await supabase.from('daily_budgets').insert({
-      user_id:        TEST_USER_ID,
-      descricao:      formData.descricao,
-      categoria:      formData.categoria,
-      valor_mensal:   formData.valor_mensal,
-      mes_referencia: formData.mes_referencia,
+      user_id:      TEST_USER_ID,
+      descricao:    formData.descricao,
+      categoria:    '',
+      valor_mensal: formData.valor_mensal,
     })
     if (error) return { success: false, error: error.message }
     revalidatePath('/')

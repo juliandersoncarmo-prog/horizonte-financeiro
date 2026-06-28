@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TrendingUp, TrendingDown, List, Settings } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
+import DiarioModal from './DiarioModal'
+
 
 export default function Sidebar() {
-  const [active, setActive] = useState('entradas')
-  const [modal,  setModal]  = useState<'entrada' | 'saida' | null>(null)
-  const [theme,  setTheme]  = useState<'light' | 'dark'>('light')
+  const [active,      setActive]      = useState('entradas')
+  const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
+  const [showDiario,  setShowDiario]  = useState(false)
+  const [theme,       setTheme]       = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
     const saved = localStorage.getItem('hf-theme') as 'light' | 'dark' | null
@@ -62,7 +65,7 @@ export default function Sidebar() {
         </button>
 
         <button
-          onClick={() => setActive('diario')}
+          onClick={() => { setActive('diario'); setShowDiario(true) }}
           className={navBtn(active === 'diario')}
         >
           <List className="w-[18px] h-[18px] flex-none" />
@@ -101,6 +104,10 @@ export default function Sidebar() {
 
       {modal && (
         <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
+      )}
+
+      {showDiario && (
+        <DiarioModal onClose={() => setShowDiario(false)} />
       )}
     </aside>
   )
