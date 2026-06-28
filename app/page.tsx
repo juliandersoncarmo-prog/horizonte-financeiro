@@ -1,65 +1,36 @@
-import Image from "next/image";
+import { runProjection } from '@/lib/engine/projection'
+import type { ProjectionInput } from '@/types'
+import LedgerView from '@/components/LedgerView'
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+const INPUT: ProjectionInput = {
+  settings: {
+    saldo_abertura: 12454.33,
+    data_ancora:    '2026-04-01',
+  },
+  recurringRules: [
+    { id: '1', tipo: 'entrada', valor: 200,  descricao: 'Pix recebido',     categoria: 'Receitas',  frequencia: 'mensal', dia_do_mes: 5,  data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '2', tipo: 'entrada', valor: 450,  descricao: 'Plantão',          categoria: 'Receitas',  frequencia: 'mensal', dia_do_mes: 10, data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '3', tipo: 'entrada', valor: 1500, descricao: 'Salário',          categoria: 'Receitas',  frequencia: 'mensal', dia_do_mes: 25, data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '4', tipo: 'saida',   valor: 850,  descricao: 'Cartão de crédito',categoria: 'Despesas',  frequencia: 'mensal', dia_do_mes: 8,  data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '5', tipo: 'saida',   valor: 120,  descricao: 'Internet',         categoria: 'Moradia',   frequencia: 'mensal', dia_do_mes: 12, data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '6', tipo: 'saida',   valor: 81,   descricao: 'MEI',              categoria: 'Negócios',  frequencia: 'mensal', dia_do_mes: 20, data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+    { id: '7', tipo: 'saida',   valor: 1200, descricao: 'Aluguel',          categoria: 'Moradia',   frequencia: 'mensal', dia_do_mes: 25, data_inicio: '2026-04-01', modo_termino: 'nunca', valor_termino: null },
+  ],
+  dailyBudgets: [
+    { id: 'b1', mes_referencia: '2026-04', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+    { id: 'b2', mes_referencia: '2026-05', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+    { id: 'b3', mes_referencia: '2026-06', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2957.10 },
+    { id: 'b4', mes_referencia: '2026-07', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2900.05 },
+    { id: 'b5', mes_referencia: '2026-08', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2728    },
+    { id: 'b6', mes_referencia: '2026-09', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+    { id: 'b7', mes_referencia: '2026-10', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+    { id: 'b8', mes_referencia: '2026-11', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+    { id: 'b9', mes_referencia: '2026-12', descricao: 'Gastos variáveis', categoria: 'Variável', valor_mensal: 2700    },
+  ],
+  horizonMonths: 9,
+}
+
+export default function HomePage() {
+  const projection = runProjection(INPUT)
+  return <LedgerView projection={projection} />
 }

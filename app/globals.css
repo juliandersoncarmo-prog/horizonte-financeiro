@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
+/* ─── Tema claro ─────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:               #F4F6F9;
+  --surface:          #FFFFFF;
+  --surface-2:        #FBFCFE;
+  --surface-3:        #F0F3F8;
+  --border:           #E7EBF1;
+  --border-strong:    #D8DEE8;
+  --text:             #19233A;
+  --text-2:           #5B6678;
+  --text-3:           #9AA4B5;
+  --accent:           #2F57E6;
+  --accent-strong:    #1E3FC4;
+  --accent-soft:      #EAF0FF;
+  --green:            #1B7A43;
+  --green-soft:       #E8F5ED;
+  --green-light:      #2E9E5B;
+  --green-light-soft: #D4F0DF;
+  --yellow:           #9A6212;
+  --yellow-soft:      #FBF2DF;
+  --orange:           #C2410C;
+  --orange-soft:      #FBEEE4;
+  --red:              #C32626;
+  --red-soft:         #FBEAEA;
 }
 
+/* ─── Tema escuro ────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:               #0C1322;
+  --surface:          #141D30;
+  --surface-2:        #19233A;
+  --surface-3:        #1F2B45;
+  --border:           #1F2B45;
+  --border-strong:    #243352;
+  --text:             #E8EDF5;
+  --text-2:           #8FA0BC;
+  --text-3:           #5B6E8A;
+  --accent:           #5C7CFF;
+  --accent-strong:    #7B96FF;
+  --accent-soft:      #1A2B5C;
+  --green:            #54D38A;
+  --green-soft:       #0D2E1E;
+  --green-light:      #54D38A;
+  --green-light-soft: #0D2E1E;
+  --yellow:           #E9B454;
+  --yellow-soft:      #2E2005;
+  --orange:           #F08A4B;
+  --orange-soft:      #2E1205;
+  --red:              #F26B6B;
+  --red-soft:         #2E0A0A;
+}
+
+/* ─── Tokens Tailwind (inline = referencia CSS vars → muda com o tema) ───── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg:               var(--bg);
+  --color-surface:          var(--surface);
+  --color-surface-2:        var(--surface-2);
+  --color-surface-3:        var(--surface-3);
+  --color-border:           var(--border);
+  --color-border-strong:    var(--border-strong);
+  --color-text:             var(--text);
+  --color-text-2:           var(--text-2);
+  --color-text-3:           var(--text-3);
+  --color-accent:           var(--accent);
+  --color-accent-strong:    var(--accent-strong);
+  --color-accent-soft:      var(--accent-soft);
+  --color-green:            var(--green);
+  --color-green-soft:       var(--green-soft);
+  --color-green-light:      var(--green-light);
+  --color-green-light-soft: var(--green-light-soft);
+  --color-yellow:           var(--yellow);
+  --color-yellow-soft:      var(--yellow-soft);
+  --color-orange:           var(--orange);
+  --color-orange-soft:      var(--orange-soft);
+  --color-red:              var(--red);
+  --color-red-soft:         var(--red-soft);
+
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+
+  --shadow-sm: 0 1px 2px 0 rgb(25 35 58 / 0.06);
+  --shadow:    0 1px 4px 0 rgb(25 35 58 / 0.08), 0 2px 8px -2px rgb(25 35 58 / 0.06);
+  --shadow-lg: 0 8px 24px -4px rgb(25 35 58 / 0.12), 0 4px 8px -2px rgb(25 35 58 / 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ─── Resets e base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Utilitário de números tabulares ────────────────────────────────────── */
+.num { font-variant-numeric: tabular-nums; }
