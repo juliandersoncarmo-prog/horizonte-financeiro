@@ -76,7 +76,7 @@ function isRuleActiveOnDate(
 }
 
 export function runProjection(input: ProjectionInput): ProjectionResult {
-  const { settings, recurringRules, dailyBudgets, horizonMonths } = input
+  const { settings, recurringRules, transactions, dailyBudgets, horizonMonths } = input
 
   const [anchorYear, anchorMonth] = settings.data_ancora.split('-').map(Number)
   const startMonth = anchorMonth - 1
@@ -118,6 +118,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         if (!isRuleActiveOnDate(rule, dateISO, year, month, d)) continue
 
         events.push({
+          ruleId: rule.id,
           descricao: rule.descricao,
           categoria: rule.categoria,
           valor: rule.valor,
@@ -130,6 +131,26 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         } else {
           saldo -= rule.valor
           totalSaidas += rule.valor
+        }
+      }
+
+      for (const tx of transactions) {
+        if (tx.data !== dateISO) continue
+
+        events.push({
+          id: tx.id,
+          descricao: tx.descricao,
+          categoria: tx.categoria,
+          valor: tx.valor,
+          tipo: tx.tipo,
+        })
+
+        if (tx.tipo === 'entrada') {
+          saldo += tx.valor
+          totalEntradas += tx.valor
+        } else {
+          saldo -= tx.valor
+          totalSaidas += tx.valor
         }
       }
 

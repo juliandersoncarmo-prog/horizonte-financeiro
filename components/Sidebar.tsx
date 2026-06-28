@@ -1,18 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { TrendingUp, TrendingDown, List, Settings } from 'lucide-react'
-
-const NAV = [
-  { id: 'entradas',      label: 'Entradas',      Icon: TrendingUp  },
-  { id: 'saidas',        label: 'Saídas',        Icon: TrendingDown },
-  { id: 'diario',        label: 'Diário',        Icon: List        },
-  { id: 'configuracoes', label: 'Configurações', Icon: Settings    },
-]
+import AddTransactionModal from './AddTransactionModal'
 
 export default function Sidebar() {
   const [active, setActive] = useState('entradas')
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [modal,  setModal]  = useState<'entrada' | 'saida' | null>(null)
+  const [theme,  setTheme]  = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
     const saved = localStorage.getItem('hf-theme') as 'light' | 'dark' | null
@@ -29,6 +25,11 @@ export default function Sidebar() {
     localStorage.setItem('hf-theme', next)
   }
 
+  const navBtn = (isActive: boolean) => [
+    'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left',
+    isActive ? 'bg-accent-soft text-accent' : 'text-text-2 hover:bg-surface-2 hover:text-text',
+  ].join(' ')
+
   return (
     <aside className="w-60 flex-none flex flex-col border-r border-border bg-surface h-full">
       {/* Logo */}
@@ -44,24 +45,38 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-        {NAV.map(({ id, label, Icon }) => {
-          const isActive = active === id
-          return (
-            <button
-              key={id}
-              onClick={() => setActive(id)}
-              className={[
-                'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left',
-                isActive
-                  ? 'bg-accent-soft text-accent'
-                  : 'text-text-2 hover:bg-surface-2 hover:text-text',
-              ].join(' ')}
-            >
-              <Icon className="w-[18px] h-[18px] flex-none" />
-              {label}
-            </button>
-          )
-        })}
+        <button
+          onClick={() => { setActive('entradas'); setModal('entrada') }}
+          className={navBtn(active === 'entradas')}
+        >
+          <TrendingUp className="w-[18px] h-[18px] flex-none" />
+          + Entrada
+        </button>
+
+        <button
+          onClick={() => { setActive('saidas'); setModal('saida') }}
+          className={navBtn(active === 'saidas')}
+        >
+          <TrendingDown className="w-[18px] h-[18px] flex-none" />
+          + Saída
+        </button>
+
+        <button
+          onClick={() => setActive('diario')}
+          className={navBtn(active === 'diario')}
+        >
+          <List className="w-[18px] h-[18px] flex-none" />
+          Diário
+        </button>
+
+        <Link
+          href="/configuracoes"
+          className={navBtn(active === 'configuracoes')}
+          onClick={() => setActive('configuracoes')}
+        >
+          <Settings className="w-[18px] h-[18px] flex-none" />
+          Configurações
+        </Link>
       </nav>
 
       {/* Footer */}
@@ -83,6 +98,10 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
+
+      {modal && (
+        <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
+      )}
     </aside>
   )
 }

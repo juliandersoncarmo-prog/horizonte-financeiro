@@ -29,6 +29,8 @@ export interface Settings {
 }
 
 export interface DayEvent {
+  id?: string      // set for avulsa transactions
+  ruleId?: string  // set for recurring rule occurrences
   descricao: string
   categoria: string
   valor: number
@@ -66,9 +68,19 @@ export interface ProjectionResult {
   settings: Settings
 }
 
+export interface Transaction {
+  id: string
+  tipo: TipoTransacao
+  valor: number
+  descricao: string
+  categoria: string
+  data: string  // ISO date YYYY-MM-DD
+}
+
 export interface ProjectionInput {
   settings: Settings
   recurringRules: RecurringRule[]
+  transactions: Transaction[]
   dailyBudgets: DailyBudget[]
   horizonMonths: number
 }

@@ -13,36 +13,20 @@ interface LedgerControlsProps {
 export default function LedgerControls({ months, startIndex, visible, onStartChange }: LedgerControlsProps) {
   const btnBase = 'flex items-center justify-center rounded-lg border border-border text-sm text-text-2 hover:bg-surface-2 disabled:opacity-40 transition-colors'
 
-  // Gera range de anos: 2 anos antes do início dos dados até o último ano dos dados
-  const yearRange = useMemo(() => {
-    const seen = new Set<number>()
-    months.forEach(m => seen.add(m.year))
-    const sorted = Array.from(seen).sort((a, b) => a - b)
-    const min = (sorted[0] ?? new Date().getFullYear()) - 2
-    const max = sorted[sorted.length - 1] ?? new Date().getFullYear()
-    return Array.from({ length: max - min + 1 }, (_, i) => min + i)
-  }, [months])
+  const yearRange = useMemo(
+    () => [...new Set(months.map(m => m.year))],
+    [months],
+  )
 
-  const currentYear     = months[startIndex]?.year ?? yearRange[0]
-  const currentMonthNum = months[startIndex]?.month
+  const currentYear = months[startIndex]?.year ?? yearRange[0]
 
   function jumpToYear(year: number) {
-    // Procura o mesmo mês no ano alvo
-    const sameMonth = months.findIndex(m => m.year === year && m.month === currentMonthNum)
-    if (sameMonth !== -1) {
-      onStartChange(sameMonth)
-      return
-    }
-    // Fora do range dos dados: vai para o início ou fim disponível
-    if (year < (months[0]?.year ?? 9999)) {
-      onStartChange(0)
-    } else {
-      onStartChange(Math.max(0, months.length - visible))
-    }
+    const idx = months.findIndex(m => m.year === year)
+    onStartChange(idx !== -1 ? idx : 0)
   }
 
   const atFirst = startIndex === 0
-  const atLast  = startIndex >= months.length - visible
+  const atLast  = startIndex + visible >= months.length
 
   return (
     <div className="flex items-center gap-3 px-6 py-2.5 border-b border-border bg-surface flex-none">
