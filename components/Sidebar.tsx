@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { TrendingUp, TrendingDown, List, Settings } from 'lucide-react'
 
 const NAV = [
-  { id: 'horizonte',     label: 'Horizonte',      icon: '◈' },
-  { id: 'entradas',      label: 'Entradas',        icon: '↑' },
-  { id: 'saidas',        label: 'Saídas',          icon: '↓' },
-  { id: 'diario',        label: 'Diário',          icon: '≡' },
-  { id: 'configuracoes', label: 'Configurações',   icon: '⚙' },
+  { id: 'entradas',      label: 'Entradas',      Icon: TrendingUp  },
+  { id: 'saidas',        label: 'Saídas',        Icon: TrendingDown },
+  { id: 'diario',        label: 'Diário',        Icon: List        },
+  { id: 'configuracoes', label: 'Configurações', Icon: Settings    },
 ]
 
 export default function Sidebar() {
-  const [active, setActive] = useState('horizonte')
+  const [active, setActive] = useState('entradas')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
@@ -44,21 +44,24 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-        {NAV.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActive(item.id)}
-            className={[
-              'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left',
-              active === item.id
-                ? 'bg-accent-soft text-accent'
-                : 'text-text-2 hover:bg-surface-2 hover:text-text',
-            ].join(' ')}
-          >
-            <span className="text-base w-5 text-center leading-none select-none">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
+        {NAV.map(({ id, label, Icon }) => {
+          const isActive = active === id
+          return (
+            <button
+              key={id}
+              onClick={() => setActive(id)}
+              className={[
+                'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors text-left',
+                isActive
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-text-2 hover:bg-surface-2 hover:text-text',
+              ].join(' ')}
+            >
+              <Icon className="w-[18px] h-[18px] flex-none" />
+              {label}
+            </button>
+          )
+        })}
       </nav>
 
       {/* Footer */}

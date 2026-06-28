@@ -1,25 +1,30 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { TrendingUp, Download, Upload } from 'lucide-react'
 import type { ProjectionResult, DayResult } from '@/types'
-import { balanceColor, formatBRL } from '@/lib/engine/projection'
+import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
 import KpiCard from './KpiCard'
 import MonthColumn, { type Mode } from './MonthColumn'
 import DayDetail from './DayDetail'
 import LedgerControls from './LedgerControls'
 
+const VISIBLE = 4
+
+const MONTHS_SHORT = ['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.']
+
+function todayFormatted(): string {
+  const t = new Date()
+  return `${t.getDate()} de ${MONTHS_SHORT[t.getMonth()]} de ${t.getFullYear()}`
+}
+
 interface LedgerViewProps {
   projection: ProjectionResult
 }
 
-function todayString(): string {
-  const t = new Date()
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
-}
-
 export default function LedgerView({ projection }: LedgerViewProps) {
   const { months } = projection
-  const todayISO = useMemo(todayString, [])
+  const todayLabel = useMemo(todayFormatted, [])
 
   const todayMonthIdx = useMemo(
     () => Math.max(0, months.findIndex(m => m.days.some(d => d.isToday))),
@@ -27,11 +32,10 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   )
 
   const [startIndex,   setStartIndex]   = useState(todayMonthIdx)
-  const [visible,      setVisible]      = useState<1 | 2 | 3>(3)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [mode,         setMode]         = useState<Mode>('entrada')
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayISO)
 
-  const visibleMonths = months.slice(startIndex, startIndex + visible)
+  const visibleMonths = months.slice(startIndex, startIndex + VISIBLE)
 
   const selectedDay = useMemo<DayResult | null>(
     () => selectedDate ? (months.flatMap(m => m.days).find(d => d.date === selectedDate) ?? null) : null,
@@ -44,42 +48,40 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   )
 
   const currentMonth = months[startIndex] ?? months[0]
-  const kpiSaldo     = todayDay?.saldo ?? projection.settings.saldo_abertura
-  const kpiEntradas  = currentMonth?.totalEntradas ?? 0
-  const kpiSaidas    = currentMonth?.totalSaidas   ?? 0
-  const firstNeg     = projection.firstNegativeDate
-
-  function handleToday() {
-    setSelectedDate(todayISO)
-    setStartIndex(todayMonthIdx)
-  }
+  const kpiSaldo    = todayDay?.saldo ?? projection.settings.saldo_abertura
+  const kpiEntradas = currentMonth?.totalEntradas ?? 0
+  const kpiSaidas   = currentMonth?.totalSaidas   ?? 0
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* KPI cards */}
-      <div className="grid grid-cols-4 gap-3 px-6 py-4 flex-none">
+      <div className="grid grid-cols-3 gap-3 px-6 py-4 flex-none">
         <KpiCard
           label="Saldo Hoje"
           value={formatBRL(kpiSaldo)}
-          sublabel={todayISO}
+          sublabel={todayLabel}
           color={balanceColor(kpiSaldo)}
+          icon={TrendingUp}
+          iconBg="#dcfce7"
+          iconColor="#16a34a"
         />
         <KpiCard
           label="Entradas do Mês"
           value={formatBRL(kpiEntradas)}
-          sublabel={currentMonth?.label}
+          sublabel={currentMonth ? monthLabel(currentMonth.year, currentMonth.month) : undefined}
           color="green"
+          icon={Download}
+          iconBg="#dcfce7"
+          iconColor="#16a34a"
         />
         <KpiCard
           label="Saídas do Mês"
-          value={formatBRL(kpiSaidas)}
-          sublabel={currentMonth?.label}
+          value={kpiSaidas > 0 ? `-${formatBRL(kpiSaidas)}` : formatBRL(kpiSaidas)}
+          sublabel={currentMonth ? monthLabel(currentMonth.year, currentMonth.month) : undefined}
           color="red"
-        />
-        <KpiCard
-          label="Primeiro Saldo Negativo"
-          value={firstNeg ?? 'Não previsto'}
-          color={firstNeg ? 'red' : 'green'}
+          icon={Upload}
+          iconBg="#fee2e2"
+          iconColor="#dc2626"
         />
       </div>
 
@@ -87,29 +89,36 @@ export default function LedgerView({ projection }: LedgerViewProps) {
       <LedgerControls
         months={months}
         startIndex={startIndex}
-        visible={visible}
-        mode={mode}
+        visible={VISIBLE}
         onStartChange={setStartIndex}
-        onVisibleChange={setVisible}
-        onModeChange={setMode}
-        onToday={handleToday}
       />
 
-      {/* Ledger + detail panel */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
-          {visibleMonths.map(month => (
-            <MonthColumn
-              key={month.label}
-              month={month}
-              selectedDate={selectedDate}
-              onDaySelect={setSelectedDate}
-              mode={mode}
-            />
-          ))}
-        </div>
-        <DayDetail day={selectedDay} />
+      {/* Ledger columns — 4 colunas, layout card */}
+      <div className="flex flex-1 overflow-hidden gap-3 px-4 py-3">
+        {visibleMonths.map((month, i) => (
+          <MonthColumn
+            key={month.label}
+            month={month}
+            selectedDate={selectedDate}
+            onDaySelect={setSelectedDate}
+            mode={mode}
+            onModeChange={setMode}
+            className={
+              i >= 2 ? 'flex-1 min-w-0 hidden lg:flex' :
+              i >= 1 ? 'flex-1 min-w-0 hidden sm:flex' :
+              'flex-1 min-w-0'
+            }
+          />
+        ))}
       </div>
+
+      {/* Day detail modal */}
+      {selectedDay && (
+        <DayDetail
+          day={selectedDay}
+          onClose={() => setSelectedDate(null)}
+        />
+      )}
     </div>
   )
 }

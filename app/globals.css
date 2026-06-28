@@ -100,3 +100,9 @@ body {
 
 /* ─── Utilitário de números tabulares ────────────────────────────────────── */
 .num { font-variant-numeric: tabular-nums; }
+
+/* ─── Scrollbar fina para colunas mensais ────────────────────────────────── */
+.month-scroll::-webkit-scrollbar        { width: 4px; }
+.month-scroll::-webkit-scrollbar-track  { background: transparent; }
+.month-scroll::-webkit-scrollbar-thumb  { background: #d1d5db; border-radius: 2px; }
+.month-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
