@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { TrendingUp, TrendingDown, List, Settings, LogOut, LayoutDashboard } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
 import DiarioModal from './DiarioModal'
@@ -9,7 +10,7 @@ import { signOut } from '@/app/actions'
 
 
 export default function Sidebar() {
-  const [active,      setActive]      = useState('entradas')
+  const pathname = usePathname()
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
   const [theme,       setTheme]       = useState<'light' | 'dark'>('light')
@@ -51,32 +52,31 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
         <Link
           href="/"
-          className={navBtn(active === 'visao-geral')}
-          onClick={() => setActive('visao-geral')}
+          className={navBtn(pathname === '/')}
         >
           <LayoutDashboard className="w-[18px] h-[18px] flex-none" />
           Visão Geral
         </Link>
 
         <button
-          onClick={() => { setActive('entradas'); setModal('entrada') }}
-          className={navBtn(active === 'entradas')}
+          onClick={() => setModal('entrada')}
+          className={navBtn(false)}
         >
           <TrendingUp className="w-[18px] h-[18px] flex-none" />
           + Entrada
         </button>
 
         <button
-          onClick={() => { setActive('saidas'); setModal('saida') }}
-          className={navBtn(active === 'saidas')}
+          onClick={() => setModal('saida')}
+          className={navBtn(false)}
         >
           <TrendingDown className="w-[18px] h-[18px] flex-none" />
           + Saída
         </button>
 
         <button
-          onClick={() => { setActive('diario'); setShowDiario(true) }}
-          className={navBtn(active === 'diario')}
+          onClick={() => setShowDiario(true)}
+          className={navBtn(false)}
         >
           <List className="w-[18px] h-[18px] flex-none" />
           Diário
@@ -84,8 +84,7 @@ export default function Sidebar() {
 
         <Link
           href="/configuracoes"
-          className={navBtn(active === 'configuracoes')}
-          onClick={() => setActive('configuracoes')}
+          className={navBtn(pathname === '/configuracoes')}
         >
           <Settings className="w-[18px] h-[18px] flex-none" />
           Configurações
