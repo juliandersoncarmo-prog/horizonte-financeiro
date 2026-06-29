@@ -120,7 +120,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
                 required
                 value={descricao}
                 onChange={e => setDescricao(e.target.value)}
-                placeholder="Ex: Supermercado"
+                placeholder={tipo === 'entrada' ? 'Ex: Salário, Freelance...' : 'Ex: Aluguel, Conta de luz...'}
                 className={fieldClass}
               />
             </div>

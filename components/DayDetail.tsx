@@ -14,6 +14,7 @@ const COLOR_TEXT: Record<string, string> = {
   yellow:       'text-yellow',
   orange:       'text-orange',
   red:          'text-red',
+  neutral:      'text-gray-400',
 }
 
 const MONTHS = [
@@ -28,6 +29,7 @@ const WEEKDAYS = [
 interface DayDetailProps {
   day: DayResult
   onClose: () => void
+  hasData?: boolean
 }
 
 interface EditState {
@@ -37,14 +39,14 @@ interface EditState {
   valor: string
 }
 
-export default function DayDetail({ day, onClose }: DayDetailProps) {
+export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const router = useRouter()
   const [addTipo,   setAddTipo]   = useState<'entrada' | 'saida' | null>(null)
   const [editing,   setEditing]   = useState<EditState | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [saving,    setSaving]    = useState(false)
 
-  const color    = balanceColor(day.saldo)
+  const color    = balanceColor(day.saldo, hasData)
   const weekday  = WEEKDAYS[new Date(day.date + 'T12:00:00').getDay()]
   const entradas = day.events.filter(e => e.tipo === 'entrada')
   const saidas   = day.events.filter(e => e.tipo === 'saida')

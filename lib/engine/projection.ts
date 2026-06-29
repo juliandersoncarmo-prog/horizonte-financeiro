@@ -19,9 +19,10 @@ function toISO(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-export type BalanceColor = 'green' | 'green-light' | 'yellow' | 'orange' | 'red'
+export type BalanceColor = 'green' | 'green-light' | 'yellow' | 'orange' | 'red' | 'neutral'
 
-export function balanceColor(saldo: number): BalanceColor {
+export function balanceColor(saldo: number, hasData?: boolean): BalanceColor {
+  if (hasData === false && saldo === 0) return 'neutral'
   if (saldo >= 2000) return 'green'
   if (saldo >= 500)  return 'green-light'
   if (saldo >= 100)  return 'yellow'

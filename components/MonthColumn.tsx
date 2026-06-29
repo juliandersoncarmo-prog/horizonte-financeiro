@@ -11,6 +11,7 @@ const SALDO_CLASS: Record<string, string> = {
   yellow:       'text-yellow bg-yellow-soft',
   orange:       'text-orange bg-orange-soft',
   red:          'text-red bg-red-soft',
+  neutral:      'text-gray-400 bg-gray-100',
 }
 
 const WEEKDAY = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
@@ -28,10 +29,11 @@ interface MonthColumnProps {
   mode: Mode
   onModeChange: (m: Mode) => void
   className?: string
+  hasData?: boolean
 }
 
 export default function MonthColumn({
-  month, selectedDate, onDaySelect, mode, onModeChange, className,
+  month, selectedDate, onDaySelect, mode, onModeChange, className, hasData,
 }: MonthColumnProps) {
   return (
     <div className={`flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
@@ -73,7 +75,7 @@ export default function MonthColumn({
       {/* Day rows */}
       <div className="flex-1 overflow-y-auto month-scroll">
         {month.days.map(day => {
-          const color      = balanceColor(day.saldo)
+          const color      = balanceColor(day.saldo, hasData)
           const isSelected = day.date === selectedDate
           const wday       = WEEKDAY[new Date(day.date + 'T12:00:00').getDay()]
 

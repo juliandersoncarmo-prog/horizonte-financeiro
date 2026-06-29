@@ -1,20 +1,29 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets } from '@/lib/db/queries'
+import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runProjection } from '@/lib/engine/projection'
 import type { ProjectionResult, RecurringRule, Transaction, DailyBudget } from '@/types'
 
-const TEST_USER_ID = '00000000-0000-0000-0000-000000000001'
+async function getAuthenticatedUserId(): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+  return user.id
+}
 
 export async function getProjectionData(startDate: string, months: number = 4): Promise<ProjectionResult> {
   try {
+    const userId = await getAuthenticatedUserId()
+
     const [settings, rawRules, transactions, rawBudgets] = await Promise.all([
-      getUserSettings(TEST_USER_ID),
-      getRecurringRules(TEST_USER_ID),
-      getTransactions(TEST_USER_ID),
-      getDailyBudgets(TEST_USER_ID),
+      getUserSettings(userId),
+      getRecurringRules(userId),
+      getTransactions(userId),
+      getDailyBudgets(userId),
     ])
 
     console.log('settings:', JSON.stringify(settings))
@@ -22,12 +31,9 @@ export async function getProjectionData(startDate: string, months: number = 4): 
     console.log('transactions:', transactions?.length)
     console.log('budgets:', rawBudgets?.length)
 
-    if (!settings) {
-      return {
-        months: [],
-        firstNegativeDate: null,
-        settings: { saldo_abertura: 0, data_ancora: startDate },
-      }
+    const effectiveSettings = settings ?? {
+      saldo_abertura: 0,
+      data_ancora: new Date().toISOString().split('T')[0],
     }
 
     const recurringRules: RecurringRule[] = rawRules.map((r) => ({
@@ -60,8 +66,8 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    console.log('runProjection input:', JSON.stringify({ saldoAbertura: settings.saldo_abertura, dataAncora: settings.data_ancora, startDate, months }))
-    const result = runProjection({ settings, recurringRules, transactions: mappedTransactions, dailyBudgets, horizonMonths: months })
+    console.log('runProjection input:', JSON.stringify({ saldoAbertura: effectiveSettings.saldo_abertura, dataAncora: effectiveSettings.data_ancora, startDate, months }))
+    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, horizonMonths: months })
     console.log('runProjection output months:', result?.months?.length)
     return result
   } catch (err) {
@@ -81,9 +87,10 @@ export async function addTransaction(formData: {
   data: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase.from('transactions').insert({
-      user_id:   TEST_USER_ID,
+      user_id:   userId,
       tipo:      formData.tipo,
       valor:     formData.valor,
       descricao: formData.descricao,
@@ -104,12 +111,13 @@ export async function updateTransaction(
   dados: { descricao: string; valor: number },
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('transactions')
       .update({ descricao: dados.descricao, valor: dados.valor })
       .eq('id', id)
-      .eq('user_id', TEST_USER_ID)
+      .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/')
     return { success: true }
@@ -124,12 +132,13 @@ export async function updateRecurringRule(
   dados: { descricao: string; valor: number },
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('recurring_rules')
       .update({ descricao: dados.descricao, valor: dados.valor })
       .eq('id', id)
-      .eq('user_id', TEST_USER_ID)
+      .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/')
     return { success: true }
@@ -148,10 +157,11 @@ export async function addRecurringRule(formData: {
   valor_termino: string | null
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const today = new Date().toISOString().split('T')[0]
     const { error } = await supabase.from('recurring_rules').insert({
-      user_id:      TEST_USER_ID,
+      user_id:      userId,
       tipo:         formData.tipo,
       valor:        formData.valor,
       descricao:    formData.descricao,
@@ -177,11 +187,12 @@ export async function saveSettings(dados: {
   data_ancora: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('settings')
       .upsert(
-        { user_id: TEST_USER_ID, saldo_abertura: dados.saldo_abertura, data_ancora: dados.data_ancora },
+        { user_id: userId, saldo_abertura: dados.saldo_abertura, data_ancora: dados.data_ancora },
         { onConflict: 'user_id' },
       )
     if (error) return { success: false, error: error.message }
@@ -195,12 +206,13 @@ export async function saveSettings(dados: {
 
 export async function resetAllData(): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     await Promise.all([
-      supabase.from('transactions').delete().eq('user_id', TEST_USER_ID),
-      supabase.from('recurring_rules').delete().eq('user_id', TEST_USER_ID),
-      supabase.from('daily_budgets').delete().eq('user_id', TEST_USER_ID),
-      supabase.from('settings').delete().eq('user_id', TEST_USER_ID),
+      supabase.from('transactions').delete().eq('user_id', userId),
+      supabase.from('recurring_rules').delete().eq('user_id', userId),
+      supabase.from('daily_budgets').delete().eq('user_id', userId),
+      supabase.from('settings').delete().eq('user_id', userId),
     ])
     revalidatePath('/')
     return { success: true }
@@ -214,11 +226,12 @@ export async function getAllDailyBudgets(): Promise<{
   id: string; descricao: string; categoria: string; valor_mensal: number
 }[]> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { data, error } = await supabase
       .from('daily_budgets')
       .select('id, descricao, categoria, valor_mensal')
-      .eq('user_id', TEST_USER_ID)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true })
     if (error) return []
     return (data ?? []).map(b => ({
@@ -234,12 +247,13 @@ export async function getAllDailyBudgets(): Promise<{
 
 export async function deleteDailyBudget(id: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('daily_budgets')
       .delete()
       .eq('id', id)
-      .eq('user_id', TEST_USER_ID)
+      .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/')
     return { success: true }
@@ -251,12 +265,13 @@ export async function deleteDailyBudget(id: string): Promise<{ success: boolean;
 
 export async function updateDailyBudget(id: string, valorMensal: number): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('daily_budgets')
       .update({ valor_mensal: valorMensal })
       .eq('id', id)
-      .eq('user_id', TEST_USER_ID)
+      .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/')
     return { success: true }
@@ -271,9 +286,10 @@ export async function addDailyBudget(formData: {
   valor_mensal: number
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase.from('daily_budgets').insert({
-      user_id:      TEST_USER_ID,
+      user_id:      userId,
       descricao:    formData.descricao,
       categoria:    '',
       valor_mensal: formData.valor_mensal,
@@ -285,4 +301,10 @@ export async function addDailyBudget(formData: {
     console.error('addDailyBudget error:', err)
     return { success: false, error: String(err) }
   }
+}
+
+export async function signOut(): Promise<void> {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/login')
 }

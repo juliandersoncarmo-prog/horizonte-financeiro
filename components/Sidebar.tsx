@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { TrendingUp, TrendingDown, List, Settings } from 'lucide-react'
+import { TrendingUp, TrendingDown, List, Settings, LogOut, LayoutDashboard } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
 import DiarioModal from './DiarioModal'
+import { signOut } from '@/app/actions'
 
 
 export default function Sidebar() {
@@ -48,6 +49,15 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
+        <Link
+          href="/"
+          className={navBtn(active === 'visao-geral')}
+          onClick={() => setActive('visao-geral')}
+        >
+          <LayoutDashboard className="w-[18px] h-[18px] flex-none" />
+          Visão Geral
+        </Link>
+
         <button
           onClick={() => { setActive('entradas'); setModal('entrada') }}
           className={navBtn(active === 'entradas')}
@@ -100,6 +110,15 @@ export default function Sidebar() {
             <span className="text-sm select-none">{theme === 'light' ? '☽' : '☀'}</span>
           </button>
         </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-text-3 hover:text-text hover:bg-surface-2 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5 flex-none" />
+            Sair
+          </button>
+        </form>
       </div>
 
       {modal && (

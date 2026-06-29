@@ -52,6 +52,11 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   const kpiEntradas = currentMonth?.totalEntradas ?? 0
   const kpiSaidas   = currentMonth?.totalSaidas   ?? 0
 
+  const hasData = useMemo(
+    () => months.some(m => m.totalEntradas > 0 || m.totalSaidas > 0),
+    [months],
+  )
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* KPI cards */}
@@ -60,7 +65,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
           label="Saldo Hoje"
           value={formatBRL(kpiSaldo)}
           sublabel={todayLabel}
-          color={balanceColor(kpiSaldo)}
+          color={balanceColor(kpiSaldo, hasData)}
           icon={TrendingUp}
           iconBg="#dcfce7"
           iconColor="#16a34a"
@@ -103,6 +108,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
             onDaySelect={setSelectedDate}
             mode={mode}
             onModeChange={setMode}
+            hasData={hasData}
             className={
               i >= 2 ? 'flex-1 min-w-0 hidden lg:flex' :
               i >= 1 ? 'flex-1 min-w-0 hidden sm:flex' :
@@ -117,6 +123,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
         <DayDetail
           day={selectedDay}
           onClose={() => setSelectedDate(null)}
+          hasData={hasData}
         />
       )}
     </div>

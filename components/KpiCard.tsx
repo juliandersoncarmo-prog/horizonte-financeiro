@@ -10,6 +10,7 @@ const BAR: Record<Color, string> = {
   orange:       'bg-orange',
   red:          'bg-red',
   accent:       'bg-accent',
+  neutral:      'bg-gray-200',
 }
 const VALUE_COLOR: Record<Color, string> = {
   green:        'text-green',
@@ -18,6 +19,7 @@ const VALUE_COLOR: Record<Color, string> = {
   orange:       'text-orange',
   red:          'text-red',
   accent:       'text-accent',
+  neutral:      'text-gray-400',
 }
 
 interface KpiCardProps {
