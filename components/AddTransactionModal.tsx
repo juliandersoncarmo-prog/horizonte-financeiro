@@ -18,6 +18,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   const router = useRouter()
   const today  = new Date().toISOString().split('T')[0]
 
+  const [incluidoDiario, setIncluidoDiario] = useState(false)
   const [mode,       setMode]       = useState<Mode>('avulsa')
   const [descricao,  setDescricao]  = useState('')
   const [valor,      setValor]      = useState('')
@@ -34,19 +35,11 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
     setLoading(true)
     setError(null)
 
-    if (mode === 'recorrente') {
-      console.log('[recorrente] submit payload:', {
-        duracao,
-        ocorrencias,
-        modo_termino: duracao,
-        valor_termino: duracao === 'ocorrencias' ? String(ocorrencias) : null,
-      })
-    }
-
     const result = mode === 'avulsa'
-      ? await addTransaction({ tipo, valor: Number(valor), descricao, data })
+      ? await addTransaction({ tipo, valor: Number(valor), descricao, data, incluido_diario: incluidoDiario })
       : await addRecurringRule({
           tipo,
+          incluido_diario: incluidoDiario,
           valor:         Number(valor),
           descricao,
           dia_do_mes:    Number(diaDoMes),
@@ -231,6 +224,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
               </>
             )}
 
+            {tipo === 'saida' && <label className="text-sm text-text"><input type="checkbox" checked={incluidoDiario} onChange={e => setIncluidoDiario(e.target.checked)} /> Incluída no total do Diário<p className="text-xs text-text-3">Marque somente se este valor estiver incluído no gasto variável total do dia. Não use para faturas de cartão.</p></label>}
             {error && <p className="text-xs text-red">{error}</p>}
 
             <div className="flex gap-3 pt-1">

@@ -19,7 +19,7 @@ const WEEKDAY = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 function midValue(day: DayResult, mode: Mode): string {
   if (mode === 'entrada') return day.inSum  > 0 ? `+${formatBRL(day.inSum)}`  : '—'
   if (mode === 'saida')   return day.outSum > 0 ? `−${formatBRL(day.outSum)}` : '—'
-  return day.diario > 0 ? `−${formatBRL(day.diario)}` : '—'
+  return day.diarioRealizado != null || day.diario > 0 ? `−${formatBRL(day.diario)}` : '—'
 }
 
 interface MonthColumnProps {
@@ -103,7 +103,7 @@ export default function MonthColumn({
                 <span className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :
                   mode === 'saida'   ? 'text-red'         :
-                  'text-text-2'
+                  day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'
                 }`}>
                   {midValue(day, mode)}
                 </span>

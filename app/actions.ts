@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
-import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets } from '@/lib/db/queries'
+import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runProjection, projectionHorizon } from '@/lib/engine/projection'
@@ -19,11 +19,12 @@ export async function getProjectionData(startDate: string, months: number = 4): 
   try {
     const userId = await getAuthenticatedUserId()
 
-    const [settings, rawRules, transactions, rawBudgets] = await Promise.all([
+    const [settings, rawRules, transactions, rawBudgets, dailyActuals] = await Promise.all([
       getUserSettings(userId),
       getRecurringRules(userId),
       getTransactions(userId),
       getDailyBudgets(userId),
+      getDailyActuals(userId),
     ])
 
 
@@ -34,6 +35,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
 
     const recurringRules: RecurringRule[] = rawRules.map((r) => ({
       id: r.id,
+      incluido_diario: r.incluido_diario ?? false,
       tipo: r.tipo,
       valor: Number(r.valor),
       descricao: r.descricao,
@@ -55,6 +57,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
 
     const mappedTransactions: Transaction[] = transactions.map((t) => ({
       id: t.id,
+      incluido_diario: t.incluido_diario ?? false,
       tipo: t.tipo,
       valor: Number(t.valor),
       descricao: t.descricao,
@@ -62,26 +65,23 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
+    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
     return result
   } catch (err) {
     unstable_rethrow(err)
-    console.error('getProjectionData error:', err)
-    return {
-      months: [],
-      firstNegativeDate: null,
-      settings: { saldo_abertura: 0, data_ancora: startDate },
-    }
+    throw err
   }
 }
 
 export async function addTransaction(formData: {
+  incluido_diario?: boolean
   tipo: 'entrada' | 'saida'
   valor: number
   descricao: string
   data: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    if (formData.incluido_diario && !diarioEnabled()) return { success: false, error: 'Conciliação aguarda habilitação no ambiente de testes.' }
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase.from('transactions').insert({
@@ -90,6 +90,7 @@ export async function addTransaction(formData: {
       valor:     formData.valor,
       descricao: formData.descricao,
       categoria: '',
+      ...(formData.incluido_diario && diarioEnabled() ? { incluido_diario: formData.tipo === 'saida' } : {}),
       data:      formData.data,
     })
     if (error) return { success: false, error: error.message }
@@ -103,14 +104,14 @@ export async function addTransaction(formData: {
 
 export async function updateTransaction(
   id: string,
-  dados: { descricao: string; valor: number },
+  dados: { descricao: string; valor: number; incluido_diario?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('transactions')
-      .update({ descricao: dados.descricao, valor: dados.valor })
+      .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
@@ -124,14 +125,14 @@ export async function updateTransaction(
 
 export async function updateRecurringRule(
   id: string,
-  dados: { descricao: string; valor: number },
+  dados: { descricao: string; valor: number; incluido_diario?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
       .from('recurring_rules')
-      .update({ descricao: dados.descricao, valor: dados.valor })
+      .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
     if (error) return { success: false, error: error.message }
@@ -144,6 +145,7 @@ export async function updateRecurringRule(
 }
 
 export async function addRecurringRule(formData: {
+  incluido_diario?: boolean
   tipo: 'entrada' | 'saida'
   valor: number
   descricao: string
@@ -154,6 +156,7 @@ export async function addRecurringRule(formData: {
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
+    if (formData.incluido_diario && !diarioEnabled()) return { success: false, error: 'Conciliação aguarda habilitação no ambiente de testes.' }
     const today = new Date().toISOString().split('T')[0]
     const { error } = await supabase.from('recurring_rules').insert({
       user_id:      userId,
@@ -167,6 +170,7 @@ export async function addRecurringRule(formData: {
       modo_termino: formData.modo_termino,
       valor_termino: formData.valor_termino,
       ativo:        true,
+      ...(formData.incluido_diario && diarioEnabled() ? { incluido_diario: formData.tipo === 'saida' } : {}),
     })
     if (error) return { success: false, error: error.message }
     revalidatePath('/')
@@ -207,12 +211,14 @@ export async function resetAllData(): Promise<{ success: boolean; error?: string
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
-    await Promise.all([
+    const results = await Promise.all([
       supabase.from('transactions').delete().eq('user_id', userId),
       supabase.from('recurring_rules').delete().eq('user_id', userId),
       supabase.from('daily_budgets').delete().eq('user_id', userId),
       supabase.from('settings').delete().eq('user_id', userId),
+      ...(diarioEnabled() ? [supabase.from('daily_actuals').delete().eq('user_id', userId)] : []),
     ])
+    if (results.some(r => r.error)) return { success: false, error: 'Não foi possível excluir todos os registros.' }
     revalidatePath('/')
     return { success: true }
   } catch (err) {
@@ -222,19 +228,20 @@ export async function resetAllData(): Promise<{ success: boolean; error?: string
 }
 
 export async function getAllDailyBudgets(): Promise<{
-  id: string; descricao: string; categoria: string; valor_mensal: number
+  id: string; descricao: string; categoria: string; valor_mensal: number; mes_referencia: string | null
 }[]> {
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { data, error } = await supabase
       .from('daily_budgets')
-      .select('id, descricao, categoria, valor_mensal')
+      .select('id, descricao, categoria, valor_mensal, mes_referencia')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
     if (error) return []
     return (data ?? []).map(b => ({
       id: b.id,
+      mes_referencia: b.mes_referencia,
       descricao: b.descricao,
       categoria: b.categoria,
       valor_mensal: Number(b.valor_mensal),
@@ -264,6 +271,7 @@ export async function deleteDailyBudget(id: string): Promise<{ success: boolean;
 
 export async function updateDailyBudget(id: string, valorMensal: number): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999) return { success: false, error: 'Orçamento inválido.' }
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase
@@ -285,6 +293,7 @@ export async function addDailyBudget(formData: {
   valor_mensal: number
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!Number.isFinite(formData.valor_mensal) || formData.valor_mensal < 0 || formData.valor_mensal > 999999999) return { success: false, error: "Orçamento inválido." }
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase.from('daily_budgets').insert({
@@ -306,4 +315,25 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login')
+}
+
+function diarioEnabled() { return process.env.DIARIO_INTELIGENTE_ENABLED === 'true' }
+
+export async function saveDailyActual(data: string, valor: number | null): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!diarioEnabled()) return { success: false, error: 'Diário inteligente aguarda habilitação no ambiente de testes.' }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || !Number.isFinite(Date.parse(data + 'T00:00:00Z'))
+      || new Date(data + 'T00:00:00Z').toISOString().slice(0, 10) !== data
+      || (valor !== null && (!Number.isFinite(valor) || valor < 0 || valor > 999999999 || Math.abs(valor * 100 - Math.round(valor * 100)) > 0.00001))) {
+      return { success: false, error: 'Informe uma data existente e um valor não negativo com até dois decimais.' }
+    }
+    const userId = await getAuthenticatedUserId()
+    const db = createServiceClient()
+    const result = valor === null
+      ? await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
+      : await db.from('daily_actuals').upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })
+    if (result.error) return { success: false, error: 'Não foi possível salvar o Diário.' }
+    revalidatePath('/')
+    return { success: true }
+  } catch { return { success: false, error: 'Não foi possível salvar o Diário.' } }
 }

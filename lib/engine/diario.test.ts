@@ -1,0 +1,22 @@
+import { describe, expect, it } from 'vitest'
+import { dailySchedule, runProjection } from './projection'
+import type { DailyActual, DailyBudget, ProjectionInput } from '@/types'
+const budget: DailyBudget = { id: 'b', descricao: '', categoria: '', mes_referencia: null, valor_mensal: 3100 }
+const schedule = (actuals: DailyActual[] = [], value = 3100) => dailySchedule('2026-01', 31, [{ ...budget, valor_mensal: value }], actuals)
+const sum = (rows: ReturnType<typeof schedule>) => rows.reduce((s, d) => s + Math.round(d.valor * 100), 0)
+describe('Diário inteligente', () => {
+  it('passados sem registro não criam economia', () => { expect(sum(schedule())).toBe(310000) })
+  it('zero é realizado e redistribui exatamente', () => { const s = schedule([{ data: '2026-01-01', valor: 0 }]); expect(s[0].realizado).toBe(0); expect(sum(s)).toBe(310000) })
+  it('retroativo preserva dias anteriores e recalcula cronologicamente os seguintes', () => { const s = schedule([{ data: '2026-01-02', valor: 40 }]); expect(s[0].valor).toBe(100); expect(s[8].valor).toBeGreaterThan(100); expect(s[10].valor).toBeGreaterThan(100); expect(sum(s)).toBe(310000) })
+  it('edição e exclusão recalculam sem somar realizado ao previsto', () => { expect(schedule([{ data: '2026-01-01', valor: 20 }])[0].valor).toBe(20); expect(schedule([{ data: '2026-01-01', valor: 150 }])[0].valor).toBe(150); expect(schedule()[0].realizado).toBeNull() })
+  it('preserva todos os manuais, inclusive futuro e zero', () => { const s = schedule([{ data: '2026-01-01', valor: 20 }, { data: '2026-01-20', valor: 0 }]); expect(s[19].valor).toBe(0); expect(sum(s)).toBe(310000) })
+  it('último dia gera economia/excesso sem mudar outro orçamento', () => { expect(sum(schedule([{ data: '2026-01-31', valor: 0 }]))).toBe(300000); expect(sum(schedule([{ data: '2026-01-31', valor: 200 }]))).toBe(320000) })
+  it('acima do orçamento não gera previsão negativa', () => { const s = schedule([{ data: '2026-01-01', valor: 4000 }]); expect(sum(s)).toBe(400000); expect(s.every(d => d.valor >= 0)).toBe(true) })
+  it('conserva poucos centavos e fevereiro bissexto', () => { expect(sum(schedule([{ data: '2026-01-01', valor: 0 }], .1))).toBe(10); expect(sum(dailySchedule('2024-02', 29, [{ ...budget, valor_mensal: .1 }], []))).toBe(10) })
+  it('orçamento global repete e mensal soma somente na competência', () => { const bs = [budget, { ...budget, id: 'm', mes_referencia: '2026-02', valor_mensal: 100 }]; expect(sum(dailySchedule('2026-01', 31, bs, []))).toBe(310000); expect(sum(dailySchedule('2026-02', 28, bs, []))).toBe(320000) })
+  it('o relógio não altera a consolidação cronológica', () => { const base: ProjectionInput = { settings: { saldo_abertura: 10000, data_ancora: '2026-01-01' }, recurringRules: [], transactions: [], dailyBudgets: [budget], dailyActuals: [{ data: '2026-01-01', valor: 0 }], horizonMonths: 1 }; expect(runProjection({ ...base, todayISO: '2026-01-02' }).months[0].days.map(d => d.diario)).toEqual(runProjection({ ...base, todayISO: '2026-01-20' }).months[0].days.map(d => d.diario)) })
+  const input: ProjectionInput = { settings: { saldo_abertura: 10000, data_ancora: '2026-01-01' }, recurringRules: [], transactions: [], dailyBudgets: [budget], horizonMonths: 2, todayISO: '2026-01-01' }
+  it('saldo contínuo, diferença no fechamento e mês futuro sem transferência de orçamento', () => { const r = runProjection({ ...input, dailyActuals: [{ data: '2026-01-31', valor: 0 }] }); expect(r.months[0].saldoFechamento).toBe(7000); expect(r.months[1].totalSaidas).toBe(3100); expect(r.months[1].saldoFechamento).toBe(3900) })
+  it('avulsa e recorrente explicitamente incluídas são descontadas uma vez', () => { const r = runProjection({ ...input, transactions: [{ id: 't', tipo: 'saida', valor: 50, descricao: '', categoria: '', data: '2026-01-01', incluido_diario: true }], recurringRules: [{ id: 'r', tipo: 'saida', valor: 50, descricao: '', categoria: '', frequencia: 'mensal', dia_do_mes: 1, data_inicio: '2026-01-01', modo_termino: 'nunca', valor_termino: null, incluido_diario: true }] }); expect(r.months[0].days[0].events).toHaveLength(2); expect(r.months[0].totalSaidas).toBe(3100) })
+  it('sem marcação não infere vínculo por descrição', () => { const r = runProjection({ ...input, transactions: [{ id: 't', tipo: 'saida', valor: 50, descricao: 'Mercado', categoria: '', data: '2026-01-01' }] }); expect(r.months[0].totalSaidas).toBe(3150) })
+})

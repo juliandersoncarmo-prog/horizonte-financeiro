@@ -117,10 +117,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
     const N = daysInMonth(year, month)
     const saldoAbertura = saldo
 
-    const valorMensalDiario = dailyBudgets.reduce((sum, b) => sum + b.valor_mensal, 0)
-    const monthlyCents = Math.max(0, Math.round(valorMensalDiario * 100))
-    const dailyCents = Math.floor(monthlyCents / N)
-    const remainder = monthlyCents % N
+    const schedule = dailySchedule(label, N, dailyBudgets, input.dailyActuals ?? [])
 
     let totalEntradas = 0
     let totalSaidas = 0
@@ -130,7 +127,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
       const dateISO = toISO(year, month, d)
       if (dateISO < settings.data_ancora) continue
       // Spread leftover cents over the first days; full months conserve the budget.
-      const diario = (dailyCents + (d <= remainder ? 1 : 0)) / 100
+      const { previsto: diarioPrevisto, realizado: diarioRealizado, valor: diario } = schedule[d - 1]
       saldo = money(saldo - diario)
       totalSaidas = money(totalSaidas + diario)
 
@@ -145,12 +142,13 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
           categoria: rule.categoria,
           valor: money(rule.valor),
           tipo: rule.tipo,
+          incluido_diario: rule.incluido_diario,
         })
 
         if (rule.tipo === 'entrada') {
           saldo = money(saldo + money(rule.valor))
           totalEntradas = money(totalEntradas + money(rule.valor))
-        } else {
+        } else if (!rule.incluido_diario) {
           saldo = money(saldo - money(rule.valor))
           totalSaidas = money(totalSaidas + money(rule.valor))
         }
@@ -165,19 +163,20 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
           categoria: tx.categoria,
           valor: money(tx.valor),
           tipo: tx.tipo,
+          incluido_diario: tx.incluido_diario,
         })
 
         if (tx.tipo === 'entrada') {
           saldo = money(saldo + money(tx.valor))
           totalEntradas = money(totalEntradas + money(tx.valor))
-        } else {
+        } else if (!tx.incluido_diario) {
           saldo = money(saldo - money(tx.valor))
           totalSaidas = money(totalSaidas + money(tx.valor))
         }
       }
 
       const inSum  = money(events.filter(e => e.tipo === 'entrada').reduce((a, e) => a + e.valor, 0))
-      const outSum = money(events.filter(e => e.tipo === 'saida').reduce((a, e) => a + e.valor, 0))
+      const outSum = money(events.filter(e => e.tipo === 'saida' && !e.incluido_diario).reduce((a, e) => a + e.valor, 0))
 
       const isFirstNeg = !firstNegativeDate && saldo < 0
       if (isFirstNeg) firstNegativeDate = dateISO
@@ -189,6 +188,8 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         year,
         events,
         diario,
+        diarioPrevisto,
+        diarioRealizado,
         inSum,
         outSum,
         saldo,
@@ -210,4 +211,28 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
   }
 
   return { months, firstNegativeDate, settings }
+}
+
+// Month-specific rows are additive only in their month; global rows repeat.
+// No identity is inferred from category/description.
+export function dailySchedule(label: string, count: number,
+  budgets: ProjectionInput['dailyBudgets'], actuals: NonNullable<ProjectionInput['dailyActuals']>) {
+  const cents = Math.max(0, budgets.filter(b => !b.mes_referencia || b.mes_referencia === label)
+    .reduce((sum, b) => sum + Math.round(b.valor_mensal * 100), 0))
+  const confirmed = new Map(actuals.map(a => [a.data, Math.round(a.valor * 100)]))
+  const dates = Array.from({ length: count }, (_, i) => `${label}-${String(i + 1).padStart(2, '0')}`)
+  const values = dates.map((_, i) => Math.floor(cents / count) + (i < cents % count ? 1 : 0))
+  return dates.map((date, i) => {
+    const previsto = values[i]
+    const realizado = confirmed.get(date)
+    if (realizado !== undefined) {
+      // Replay chronologically: subsequent unrecorded days inherit the forecast
+      // applicable then. The clock never rewrites historical forecasts.
+      const targets = dates.map((d, j) => j > i && !confirmed.has(d) ? j : -1).filter(j => j >= 0)
+      const remaining = Math.max(0, targets.reduce((sum, j) => sum + values[j], 0) + previsto - realizado)
+      targets.forEach((j, k) => { values[j] = Math.floor(remaining / targets.length) + (k < remaining % targets.length ? 1 : 0) })
+    }
+    return { previsto: previsto / 100, realizado: realizado === undefined ? null : realizado / 100,
+      valor: (realizado ?? previsto) / 100 }
+  })
 }

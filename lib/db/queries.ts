@@ -12,12 +12,12 @@ export async function getUserSettings(userId: string): Promise<{ saldo_abertura:
     if (error) {
       if (error.code === 'PGRST116') return null
       console.error('getUserSettings error:', error)
-      return null
+      throw new Error('Falha ao carregar configurações')
     }
     return { saldo_abertura: Number(data.saldo_abertura), data_ancora: data.data_ancora as string }
   } catch (err) {
     console.error('getUserSettings error:', err)
-    return null
+    throw err
   }
 }
 
@@ -31,12 +31,12 @@ export async function getRecurringRules(userId: string) {
       .eq('ativo', true)
     if (error) {
       console.error('getRecurringRules error:', error)
-      return []
+      throw new Error("Falha ao carregar registros financeiros")
     }
     return data ?? []
   } catch (err) {
     console.error('getRecurringRules error:', err)
-    return []
+    throw err
   }
 }
 
@@ -50,12 +50,12 @@ export async function getTransactions(userId: string) {
       .order('data', { ascending: true })
     if (error) {
       console.error('getTransactions error:', error)
-      return []
+      throw new Error("Falha ao carregar registros financeiros")
     }
     return data ?? []
   } catch (err) {
     console.error('getTransactions error:', err)
-    return []
+    throw err
   }
 }
 
@@ -68,11 +68,18 @@ export async function getDailyBudgets(userId: string) {
       .eq('user_id', userId)
     if (error) {
       console.error('getDailyBudgets error:', error)
-      return []
+      throw new Error("Falha ao carregar registros financeiros")
     }
     return data ?? []
   } catch (err) {
     console.error('getDailyBudgets error:', err)
-    return []
+    throw err
   }
+}
+
+export async function getDailyActuals(userId: string) {
+  if (process.env.DIARIO_INTELIGENTE_ENABLED !== 'true') return []
+  const { data, error } = await createServiceClient().from('daily_actuals').select('data,valor').eq('user_id', userId)
+  if (error) throw new Error('Não foi possível carregar o Diário. Verifique a migração no ambiente de testes.')
+  return (data ?? []).map(a => ({ data: String(a.data), valor: Number(a.valor) }))
 }

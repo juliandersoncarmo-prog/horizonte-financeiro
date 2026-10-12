@@ -121,6 +121,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
       {/* Day detail modal */}
       {selectedDay && (
         <DayDetail
+          key={selectedDay.date}
           day={selectedDay}
           onClose={() => setSelectedDate(null)}
           hasData={hasData}

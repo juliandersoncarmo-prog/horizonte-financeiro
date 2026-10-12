@@ -9,6 +9,7 @@ import {
   integer,
   timestamp,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -33,6 +34,7 @@ export const transactionsTable = pgTable('transactions', {
   id:         uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   user_id:    uuid('user_id').notNull(),
   tipo:       tipoTransacaoEnum('tipo').notNull(),
+  incluido_diario: boolean('incluido_diario').notNull().default(false),
   valor:      numeric('valor', { precision: 15, scale: 2 }).notNull(),
   descricao:  text('descricao').notNull(),
   categoria:  text('categoria').notNull(),
@@ -48,6 +50,7 @@ export const recurringRulesTable = pgTable('recurring_rules', {
   id:            uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   user_id:       uuid('user_id').notNull(),
   tipo:          tipoTransacaoEnum('tipo').notNull(),
+  incluido_diario: boolean('incluido_diario').notNull().default(false),
   valor:         numeric('valor', { precision: 15, scale: 2 }).notNull(),
   descricao:     text('descricao').notNull(),
   categoria:     text('categoria').notNull(),
@@ -89,3 +92,11 @@ export type NewRecurringRule = typeof recurringRulesTable.$inferInsert
 
 export type DailyBudget    = typeof dailyBudgetsTable.$inferSelect
 export type NewDailyBudget = typeof dailyBudgetsTable.$inferInsert
+
+export const dailyActualsTable = pgTable('daily_actuals', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  user_id: uuid('user_id').notNull(),
+  data: date('data').notNull(),
+  valor: numeric('valor', { precision: 15, scale: 2 }).notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex('daily_actuals_user_date_idx').on(t.user_id, t.data)])

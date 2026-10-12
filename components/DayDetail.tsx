@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Pencil, X } from 'lucide-react'
 import type { DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
-import { updateTransaction, updateRecurringRule } from '@/app/actions'
+import { updateTransaction, updateRecurringRule, saveDailyActual } from '@/app/actions'
 import AddTransactionModal from './AddTransactionModal'
 
 const COLOR_TEXT: Record<string, string> = {
@@ -37,6 +37,7 @@ interface EditState {
   kind: 'transaction' | 'rule'
   descricao: string
   valor: string
+  incluido_diario: boolean
 }
 
 export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
@@ -46,16 +47,27 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const [editError, setEditError] = useState<string | null>(null)
   const [saving,    setSaving]    = useState(false)
 
+  const [actual, setActual] = useState(day.diarioRealizado == null ? '' : String(day.diarioRealizado))
+  const [dailyError, setDailyError] = useState<string | null>(null)
+  async function saveDaily(value: number | null) {
+    setSaving(true)
+    const result = await saveDailyActual(day.date, value)
+    setSaving(false)
+    if (result.success) { setDailyError(null); router.refresh() }
+    else setDailyError(result.error ?? 'Erro ao salvar')
+  }
+
   const color    = balanceColor(day.saldo, hasData)
   const weekday  = WEEKDAYS[new Date(day.date + 'T12:00:00').getDay()]
   const entradas = day.events.filter(e => e.tipo === 'entrada')
   const saidas   = day.events.filter(e => e.tipo === 'saida')
+  const includedTotal = saidas.filter(e => e.incluido_diario).reduce((sum, e) => sum + e.valor, 0)
 
   function openEdit(e: DayEvent) {
     const id   = e.id ?? e.ruleId
     const kind = e.id ? 'transaction' : 'rule'
     if (!id) return
-    setEditing({ id, kind, descricao: e.descricao, valor: String(e.valor) })
+    setEditing({ id, kind, descricao: e.descricao, valor: String(e.valor), incluido_diario: e.incluido_diario ?? false })
     setEditError(null)
   }
 
@@ -64,7 +76,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     if (!editing) return
     setSaving(true)
     setEditError(null)
-    const dados = { descricao: editing.descricao, valor: Number(editing.valor) }
+    const dados = { descricao: editing.descricao, valor: Number(editing.valor), incluido_diario: editing.incluido_diario }
     const result = editing.kind === 'transaction'
       ? await updateTransaction(editing.id, dados)
       : await updateRecurringRule(editing.id, dados)
@@ -86,7 +98,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     const prefix   = isEntrada ? ''                : '−'
     return (
       <div className={`flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
-        <p className="text-sm font-medium text-text truncate min-w-0">{e.descricao}</p>
+        <p className="text-sm font-medium text-text truncate min-w-0">{e.descricao}{e.incluido_diario ? " · incluída no Diário" : ""}</p>
         <div className="flex items-center gap-2 ml-3 flex-none">
           <span className={`text-sm font-semibold num ${valColor}`}>{prefix}{formatBRL(e.valor)}</span>
           <button
@@ -107,7 +119,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-96 max-h-[80vh] overflow-y-auto">
+      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div>
@@ -148,15 +160,23 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             </section>
           )}
 
-          {day.diario > 0 && (
-            <section>
-              <p className="text-[10px] font-bold text-text-3 uppercase tracking-widest mb-2">Orçamento Diário</p>
-              <div className="flex items-center justify-between px-3 py-2 bg-surface-2 rounded-xl">
-                <p className="text-sm font-medium text-text">Gasto variável</p>
-                <span className="text-sm font-semibold text-text-2 num ml-3 flex-none">−{formatBRL(day.diario)}</span>
-              </div>
-            </section>
-          )}
+          <section>
+            <p className="text-[10px] font-bold text-text-3 uppercase tracking-widest mb-2">Diário</p>
+            <div className="text-sm bg-surface-2 rounded-xl p-3 space-y-2">
+              <p className="text-text-3">Previsto: {formatBRL(day.diarioPrevisto ?? day.diario)}</p>
+              <p className="text-text font-semibold">Realizado: {day.diarioRealizado == null ? 'Não informado' : formatBRL(day.diarioRealizado)}</p>
+              <p className="text-text-2">Diferença (realizado − previsto): {day.diarioRealizado == null ? '—' : formatBRL(day.diarioRealizado - (day.diarioPrevisto ?? day.diario))}</p>
+              <form onSubmit={e => { e.preventDefault(); void saveDaily(Number(actual)) }} className="space-y-2">
+                <label htmlFor="daily-actual" className="text-text">Gasto variável total do dia (R$)</label>
+                <input id="daily-actual" required type="number" min="0" max="999999999" step="0.01" value={actual} onChange={e => setActual(e.target.value)} className={fieldClass} />
+                <button disabled={saving || actual === ''} className="bg-accent text-white rounded-lg px-3 py-2 disabled:opacity-50">Salvar gasto</button>
+                {day.diarioRealizado != null && <button type="button" disabled={saving} onClick={() => { setActual(''); void saveDaily(null) }} className="text-red ml-3">Excluir realizado</button>}
+              </form>
+              <p className="text-xs text-text-3">Sem registro, vale o previsto. Inclua aqui as saídas marcadas como incluídas no Diário. Faturas de cartão ficam separadas.</p>
+              {includedTotal > day.diario && <p role="alert" className="text-orange">As saídas incluídas somam {formatBRL(includedTotal)}, acima do Diário. Corrija o total diário ou retire a marcação das saídas que ficam separadas.</p>}
+              {dailyError && <p role="alert" className="text-red">{dailyError}</p>}
+            </div>
+          </section>
 
           {entradas.length === 0 && saidas.length === 0 && day.diario === 0 && (
             <p className="text-sm text-text-3 text-center py-6">Nenhum evento neste dia</p>
@@ -204,7 +224,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             </div>
             {editing.kind === 'rule' && (
               <p className="text-xs text-text-3 mb-4">
-                Altera a regra recorrente — afeta todas as ocorrências futuras.
+                Altera a regra recorrente — recalcula todas as ocorrências, inclusive as passadas.
               </p>
             )}
             <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
@@ -230,6 +250,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                   className={fieldClass}
                 />
               </div>
+              <label className="text-sm text-text"><input type="checkbox" checked={editing.incluido_diario} onChange={e => setEditing(s => s && ({ ...s, incluido_diario: e.target.checked }))} /> Incluída no total do Diário (somente saídas)</label>
               {editError && <p className="text-xs text-red">{editError}</p>}
               <div className="flex gap-3 pt-1">
                 <button

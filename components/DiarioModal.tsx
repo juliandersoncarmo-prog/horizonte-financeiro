@@ -9,6 +9,7 @@ type BudgetItem = {
   id: string
   descricao: string
   categoria: string
+  mes_referencia: string | null
   valor_mensal: number
 }
 
@@ -82,8 +83,11 @@ export default function DiarioModal({ onClose }: Props) {
     }
   }
 
-  const totalMensal = items.reduce((s, b) => s + b.valor_mensal, 0)
-  const diario      = totalMensal / 30
+  const month = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()).slice(0, 7)
+  const [year, monthNumber] = month.split('-').map(Number)
+  const dayCount = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
+  const totalMensal = items.filter(b => !b.mes_referencia || b.mes_referencia === month).reduce((s, b) => s + b.valor_mensal, 0)
+  const diario = totalMensal / dayCount
 
   const fieldClass = 'border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
 
@@ -118,7 +122,7 @@ export default function DiarioModal({ onClose }: Props) {
             <div className="flex flex-col gap-1.5 pb-2">
               {items.map(item => (
                 <div key={item.id} className="flex items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
-                  <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}</span>
+                  <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : " (global)"}</span>
 
                   {editingId === item.id ? (
                     <>
@@ -213,7 +217,7 @@ export default function DiarioModal({ onClose }: Props) {
             </span>
           </div>
           <div className="flex justify-between items-center text-xs text-text-3 mb-4">
-            <span>÷ 30 dias =</span>
+            <span>÷ {dayCount} dias ({month}, média inicial) =</span>
             <span className="font-medium num">
               {diario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por dia
             </span>

@@ -5,6 +5,7 @@ export type ModoTermino   = 'nunca' | 'horizonte' | 'ocorrencias' | 'data'
 export interface RecurringRule {
   id: string
   tipo: TipoTransacao
+  incluido_diario?: boolean
   valor: number
   descricao: string
   categoria: string
@@ -17,7 +18,7 @@ export interface RecurringRule {
 
 export interface DailyBudget {
   id: string
-  mes_referencia: string     // YYYY-MM
+  mes_referencia: string | null     // YYYY-MM
   descricao: string
   categoria: string
   valor_mensal: number
@@ -35,6 +36,7 @@ export interface DayEvent {
   categoria: string
   valor: number
   tipo: TipoTransacao
+  incluido_diario?: boolean
 }
 
 export interface DayResult {
@@ -43,6 +45,8 @@ export interface DayResult {
   month: number              // 0-based
   year: number
   events: DayEvent[]
+  diarioPrevisto?: number
+  diarioRealizado?: number | null
   diario: number             // gasto diário proporcional do orçamento variável
   inSum: number
   outSum: number
@@ -71,6 +75,7 @@ export interface ProjectionResult {
 export interface Transaction {
   id: string
   tipo: TipoTransacao
+  incluido_diario?: boolean
   valor: number
   descricao: string
   categoria: string
@@ -82,6 +87,9 @@ export interface ProjectionInput {
   recurringRules: RecurringRule[]
   transactions: Transaction[]
   dailyBudgets: DailyBudget[]
+  dailyActuals?: DailyActual[]
   todayISO?: string         // optional civil date for deterministic tests
   horizonMonths: number
 }
+
+export interface DailyActual { data: string; valor: number }
