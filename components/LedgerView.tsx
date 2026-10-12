@@ -56,7 +56,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   )
 
   const currentMonth = months[safeStart] ?? months[0]
-  const kpiSaldo    = todayDay?.saldo ?? projection.settings.saldo_abertura
+  const kpiSaldo    = todayDay?.saldo
   const kpiEntradas = currentMonth?.totalEntradas ?? 0
   const kpiSaidas   = currentMonth?.totalSaidas   ?? 0
 
@@ -71,9 +71,9 @@ export default function LedgerView({ projection }: LedgerViewProps) {
       <div className="grid grid-cols-3 gap-3 px-6 py-4 flex-none">
         <KpiCard
           label="Saldo Hoje"
-          value={formatBRL(kpiSaldo)}
-          sublabel={todayLabel}
-          color={balanceColor(kpiSaldo, hasData)}
+          value={kpiSaldo === undefined ? '—' : formatBRL(kpiSaldo)}
+          sublabel={kpiSaldo === undefined ? `Referência: ${projection.settings.data_ancora.split('-').reverse().join('/')}` : todayLabel}
+          color={balanceColor(kpiSaldo ?? 0, kpiSaldo === undefined ? false : hasData)}
           icon={TrendingUp}
           iconBg="#dcfce7"
           iconColor="#16a34a"

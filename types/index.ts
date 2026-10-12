@@ -69,6 +69,7 @@ export interface MonthResult {
 }
 
 export interface ProjectionResult {
+  cardData?: { enabled: boolean; cards: CreditCard[] }
   months: MonthResult[]
   firstNegativeDate: string | null
   settings: Settings

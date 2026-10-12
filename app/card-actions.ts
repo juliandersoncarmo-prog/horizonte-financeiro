@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { readCreditCards } from '@/lib/db/card-query'
 import { createClient } from '@/lib/supabase/server'
 import { validDueDay, validMonth, validMoney } from '@/lib/cards'
 import type { CreditCard } from '@/types'
@@ -18,21 +18,14 @@ async function session() {
 
 type Result = { success: boolean; error?: string }
 async function mutate(operation: () => Promise<void>): Promise<Result> {
-  try { await operation(); revalidatePath('/'); return { success: true } }
+  try { await operation(); return { success: true } }
   catch (err) { return { success: false, error: err instanceof Error ? err.message : 'Não foi possível salvar os cartões.' } }
 }
 function check(error: unknown, data?: unknown) {
   if (error || data === null || (Array.isArray(data) && data.length === 0)) throw new Error('Não foi possível alterar o registro. Verifique se ele ainda existe e pertence à sua conta.')
 }
 
-export async function getCreditCards(): Promise<{ enabled: boolean; cards: CreditCard[] }> {
-  if (!enabled()) return { enabled: false, cards: [] }
-  const { db, userId } = await session()
-  const { data, error } = await db.from('credit_cards').select('id,nome,dia_vencimento,card_invoices(id,mes_referencia,valor)').eq('user_id', userId).order('created_at')
-  if (error) throw new Error('Não foi possível carregar os cartões. Verifique a migração no ambiente de testes.')
-  return { enabled: true, cards: (data ?? []).map(c => ({ id: c.id, nome: c.nome, dia_vencimento: c.dia_vencimento,
-    invoices: (c.card_invoices ?? []).map(i => ({ id: i.id, mes_referencia: i.mes_referencia, valor: Number(i.valor) })).sort((a, b) => a.mes_referencia.localeCompare(b.mes_referencia)) })) }
-}
+export async function getCreditCards(): Promise<{ enabled: boolean; cards: CreditCard[] }> { return readCreditCards() }
 
 export async function createCreditCard(input: { nome: string; dia_vencimento: number; invoices: { mes_referencia: string; valor: number }[] }): Promise<Result> {
   return mutate(async () => {

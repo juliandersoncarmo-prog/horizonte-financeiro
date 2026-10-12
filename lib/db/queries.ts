@@ -1,6 +1,7 @@
+import { cache } from 'react'
 import { createUserDataClient } from '@/lib/supabase/service'
 
-export async function getUserSettings(userId: string): Promise<{ saldo_abertura: number; data_ancora: string } | null> {
+export const getUserSettings = cache(async (userId: string): Promise<{ saldo_abertura: number; data_ancora: string } | null> => {
   try {
     const supabase = await createUserDataClient()
     const { data, error } = await supabase
@@ -21,7 +22,7 @@ export async function getUserSettings(userId: string): Promise<{ saldo_abertura:
     console.error('getUserSettings error:', err)
     throw err
   }
-}
+})
 
 export async function getRecurringRules(userId: string) {
   try {

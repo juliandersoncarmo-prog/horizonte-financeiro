@@ -69,7 +69,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
     }))
 
     const result = runProjection({ cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
-    return result
+    return { ...result, cardData }
   } catch (err) {
     unstable_rethrow(err)
     throw err
@@ -104,7 +104,6 @@ export async function addTransaction(formData: {
       data:      formData.data,
     })
     if (error) return { success: false, error: error.message }
-    revalidatePath('/')
     return { success: true }
   } catch (err) {
     console.error('addTransaction error:', err)
@@ -120,13 +119,13 @@ export async function updateTransaction(
     if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Movimentação inválida.' }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('transactions')
       .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
-    if (error) return { success: false, error: error.message }
-    revalidatePath('/')
+      .select('id')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível alterar o lançamento. Verifique se ele ainda existe e pertence à sua conta.' }
     return { success: true }
   } catch (err) {
     console.error('updateTransaction error:', err)
@@ -142,13 +141,13 @@ export async function updateRecurringRule(
     if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Recorrência inválida.' }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('recurring_rules')
       .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
-    if (error) return { success: false, error: error.message }
-    revalidatePath('/')
+      .select('id')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível alterar o lançamento. Verifique se ele ainda existe e pertence à sua conta.' }
     return { success: true }
   } catch (err) {
     console.error('updateRecurringRule error:', err)
@@ -193,7 +192,6 @@ export async function addRecurringRule(formData: {
       ...(formData.incluido_diario && diarioEnabled() ? { incluido_diario: formData.tipo === 'saida' } : {}),
     })
     if (error) return { success: false, error: error.message }
-    revalidatePath('/')
     return { success: true }
   } catch (err) {
     console.error('addRecurringRule error:', err)
@@ -277,7 +275,7 @@ export async function getAllDailyBudgets(): Promise<{
       .select('id, descricao, categoria, valor_mensal, mes_referencia')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
-    if (error) return []
+    if (error) throw new Error('Não foi possível carregar o Diário.')
     return (data ?? []).map(b => ({
       id: b.id,
       mes_referencia: b.mes_referencia,
@@ -286,7 +284,7 @@ export async function getAllDailyBudgets(): Promise<{
       valor_mensal: Number(b.valor_mensal),
     }))
   } catch {
-    return []
+    throw new Error('Não foi possível carregar o Diário.')
   }
 }
 
@@ -294,13 +292,13 @@ export async function deleteDailyBudget(id: string): Promise<{ success: boolean;
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('daily_budgets')
       .delete()
       .eq('id', id)
       .eq('user_id', userId)
-    if (error) return { success: false, error: error.message }
-    revalidatePath('/')
+      .select('id')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível alterar o orçamento. Verifique se ele ainda existe e pertence à sua conta.' }
     return { success: true }
   } catch (err) {
     console.error('deleteDailyBudget error:', err)
@@ -313,13 +311,13 @@ export async function updateDailyBudget(id: string, valorMensal: number): Promis
     if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999) return { success: false, error: 'Orçamento inválido.' }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('daily_budgets')
       .update({ valor_mensal: valorMensal })
       .eq('id', id)
       .eq('user_id', userId)
-    if (error) return { success: false, error: error.message }
-    revalidatePath('/')
+      .select('id')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível alterar o orçamento. Verifique se ele ainda existe e pertence à sua conta.' }
     return { success: true }
   } catch (err) {
     console.error('updateDailyBudget error:', err)
@@ -342,7 +340,6 @@ export async function addDailyBudget(formData: {
       valor_mensal: formData.valor_mensal,
     })
     if (error) return { success: false, error: error.message }
-    revalidatePath('/')
     return { success: true }
   } catch (err) {
     console.error('addDailyBudget error:', err)
@@ -372,7 +369,26 @@ export async function saveDailyActual(data: string, valor: number | null): Promi
       ? await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
       : await db.from('daily_actuals').upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })
     if (result.error) return { success: false, error: 'Não foi possível salvar o Diário.' }
-    revalidatePath('/')
     return { success: true }
   } catch { return { success: false, error: 'Não foi possível salvar o Diário.' } }
 }
+
+// Ownership is checked by the session, explicit filters and database RLS.
+async function deleteOwnedRecord(table: 'transactions' | 'recurring_rules', id: string) {
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    return { success: false, error: 'Lançamento inválido.' }
+  try {
+    const userId = await getAuthenticatedUserId()
+    const db = await createUserDataClient()
+    const { data, error } = await db.from(table).delete().eq('id', id).eq('user_id', userId).select('id')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível excluir. O lançamento pode ter sido removido ou não pertencer à sua conta.' }
+    return { success: true }
+  } catch { return { success: false, error: 'Não foi possível excluir. Verifique sua sessão e tente novamente.' } }
+}
+export async function deleteTransaction(id: string) { return deleteOwnedRecord('transactions', id) }
+export async function deleteRecurringRule(id: string, scope: 'all-occurrences') {
+  if (scope !== 'all-occurrences') return { success: false, error: 'Confirme a exclusão da regra e de todas as suas ocorrências.' }
+  return deleteOwnedRecord('recurring_rules', id)
+}
+
+export async function getInitialSettings() { return getUserSettings(await getAuthenticatedUserId()) }

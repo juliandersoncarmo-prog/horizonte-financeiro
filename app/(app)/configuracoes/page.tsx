@@ -1,10 +1,10 @@
 import SettingsForm from '@/components/SettingsForm'
-import { getProjectionData } from '@/app/actions'
+import { getInitialSettings } from '@/app/actions'
 import ResetButton from '@/components/ResetButton'
 
 export default async function ConfiguracoesPage() {
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date())
-  const { settings } = await getProjectionData(today, 0)
+  const settings = await getInitialSettings()
+  if (!settings) return null
   return (
     <div className="flex-1 p-8 max-w-lg">
       <h1 className="text-2xl font-bold text-text mb-8">Configurações</h1>

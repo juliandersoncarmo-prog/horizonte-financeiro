@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import ModalPortal from './ModalPortal'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
@@ -20,6 +20,8 @@ interface Props {
 
 export default function DiarioModal({ onClose }: Props) {
   const router = useRouter()
+  const lock = useRef(false)
+  const [notice, setNotice] = useState('')
 
   const [items,        setItems]        = useState<BudgetItem[]>([])
   const [loading,      setLoading]      = useState(true)
@@ -33,55 +35,46 @@ export default function DiarioModal({ onClose }: Props) {
 
   async function loadItems() {
     setLoading(true)
-    const data = await getAllDailyBudgets()
-    setItems(data)
-    setLoading(false)
+    try { setItems(await getAllDailyBudgets()) }
+    catch { setAddError('Não foi possível carregar o Diário.') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => {
     let active = true
     getAllDailyBudgets().then(data => {
       if (active) { setItems(data); setLoading(false) }
-    })
+    }).catch(() => { if (active) { setAddError('Não foi possível carregar o Diário.'); setLoading(false) } })
     return () => { active = false }
   }, [])
 
+  async function change(action: () => Promise<{ success: boolean; error?: string }>, after: () => void) {
+    if (lock.current) return
+    lock.current = true; setSaving(true); setAddError(null); setNotice('')
+    try {
+      const result = await action()
+      if (!result.success) { setAddError(result.error ?? 'Não foi possível salvar.'); return }
+      after(); setNotice('Alteração salva com sucesso.'); router.refresh()
+    } catch { setAddError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
+    finally { lock.current = false; setSaving(false); setAdding(false) }
+  }
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!newDescricao.trim() || !newValor) return
+    if (!newDescricao.trim() || !newValor || lock.current) return
     setAdding(true)
-    setAddError(null)
-    const result = await addDailyBudget({
-      descricao:    newDescricao.trim(),
-      valor_mensal: Number(newValor),
+    await change(() => addDailyBudget({ descricao: newDescricao.trim(), valor_mensal: Number(newValor) }), () => {
+      setNewDescricao(''); setNewValor(''); void loadItems()
     })
-    setAdding(false)
-    if (result.success) {
-      setNewDescricao('')
-      setNewValor('')
-      router.refresh()
-      loadItems()
-    } else {
-      setAddError(result.error ?? 'Erro ao adicionar')
-    }
   }
-
   async function handleDelete(id: string) {
-    await deleteDailyBudget(id)
-    router.refresh()
-    loadItems()
+    if (lock.current || !window.confirm('Excluir este orçamento mensal? Os valores realizados do Diário permanecem. A previsão e os saldos serão recalculados.')) return
+    await change(() => deleteDailyBudget(id), () => setItems(items => items.filter(item => item.id !== id)))
   }
-
   async function handleSaveEdit(id: string) {
     if (!editValor) return
-    setSaving(true)
-    const result = await updateDailyBudget(id, Number(editValor))
-    setSaving(false)
-    if (result.success) {
-      setEditingId(null)
-      router.refresh()
-      loadItems()
-    }
+    await change(() => updateDailyBudget(id, Number(editValor)), () => {
+      setItems(items => items.map(item => item.id === id ? { ...item, valor_mensal: Number(editValor) } : item)); setEditingId(null)
+    })
   }
 
   const month = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()).slice(0, 7)
@@ -93,7 +86,7 @@ export default function DiarioModal({ onClose }: Props) {
   const fieldClass = 'border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
 
   return (
-    <ModalPortal onClose={onClose} label="Diário — Gastos Variáveis">
+    <ModalPortal onClose={() => { if (!lock.current) onClose() }} label="Diário — Gastos Variáveis">
       <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full flex flex-col max-h-[calc(100dvh-2rem)]">
 
         {/* Header */}
@@ -112,6 +105,8 @@ export default function DiarioModal({ onClose }: Props) {
         {/* Lista + formulário (scroll) */}
         <div className="flex-1 overflow-y-auto px-6">
 
+          {notice && <p role="status" className="text-sm text-green">{notice}</p>}
+          {saving && <p role="status" className="text-xs text-text-3">Salvando…</p>}
           {/* Itens */}
           {loading ? (
             <p className="text-sm text-text-3 text-center py-6">Carregando…</p>
@@ -121,13 +116,13 @@ export default function DiarioModal({ onClose }: Props) {
             <div className="flex flex-col gap-1.5 pb-2">
               {items.map(item => (
                 <div key={item.id} className="flex items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
-                  <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : " (global)"}</span>
+                  <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : ""}</span>
 
                   {editingId === item.id ? (
                     <>
                       <input
                         type="number"
-                        min="0.01"
+                        min="0"
                         step="0.01"
                         autoFocus
                         value={editValor}
@@ -135,14 +130,15 @@ export default function DiarioModal({ onClose }: Props) {
                         className={`${fieldClass} w-28 text-right`}
                       />
                       <button
+                        disabled={saving || adding}
                         onClick={() => handleSaveEdit(item.id)}
-                        disabled={saving}
                         className="text-accent hover:opacity-70 transition-opacity disabled:opacity-40 flex-none"
                         title="Salvar"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
+                        disabled={saving || adding}
                         onClick={() => setEditingId(null)}
                         className="text-text-3 hover:text-text transition-colors flex-none"
                         title="Cancelar"
@@ -156,6 +152,7 @@ export default function DiarioModal({ onClose }: Props) {
                         {item.valor_mensal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
                       <button
+                        disabled={saving || adding}
                         onClick={() => { setEditingId(item.id); setEditValor(String(item.valor_mensal)) }}
                         className="text-text-3 hover:text-accent transition-colors flex-none"
                         title="Editar"
@@ -163,6 +160,7 @@ export default function DiarioModal({ onClose }: Props) {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
+                        disabled={saving || adding}
                         onClick={() => handleDelete(item.id)}
                         className="text-text-3 hover:text-red transition-colors flex-none"
                         title="Excluir"
@@ -188,7 +186,7 @@ export default function DiarioModal({ onClose }: Props) {
             <div className="flex gap-2">
               <input
                 type="number"
-                min="0.01"
+                min="0"
                 step="0.01"
                 value={newValor}
                 onChange={e => setNewValor(e.target.value)}
@@ -197,13 +195,13 @@ export default function DiarioModal({ onClose }: Props) {
               />
               <button
                 type="submit"
-                disabled={adding || !newDescricao.trim() || !newValor}
+                disabled={saving || adding || !newDescricao.trim() || !newValor}
                 className="px-4 py-2 rounded-xl bg-accent text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 flex-none whitespace-nowrap"
               >
                 {adding ? '…' : '+ Adicionar'}
               </button>
             </div>
-            {addError && <p className="text-xs text-red">{addError}</p>}
+            {addError && <p role="alert" className="text-xs text-red">{addError}</p>}
           </form>
         </div>
 
@@ -222,6 +220,7 @@ export default function DiarioModal({ onClose }: Props) {
             </span>
           </div>
           <button
+                        disabled={saving || adding}
             onClick={onClose}
             className="w-full py-2 rounded-xl bg-accent text-white text-sm font-semibold hover:opacity-90 transition-opacity"
           >

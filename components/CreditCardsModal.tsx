@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import ModalPortal from './ModalPortal'
+import { useOptionalProjection } from './ProjectionProvider'
 import { X } from 'lucide-react'
 import { createCreditCard, deleteCreditCard, deleteCardInvoice, getCreditCards, saveCardInvoice, updateCreditCard } from '@/app/card-actions'
 import { invoiceDate, resizeInvoiceDraft, invoiceMonthLabel } from '@/lib/cards'
@@ -14,17 +16,20 @@ const currentMonth = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America
 
 export default function CreditCardsModal({ onClose, initialCardId }: { onClose: () => void; initialCardId?: string }) {
   const router = useRouter()
+  const seed = useOptionalProjection()?.cardData
+  const [refreshing, startRefresh] = useTransition()
+  const [notice, setNotice] = useState('')
   const mutationLock = useRef(false)
   const dialog = useRef<HTMLDivElement>(null)
-  const [cards, setCards] = useState<CreditCard[]>([])
-  const [enabled, setEnabled] = useState<boolean | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [cards, setCards] = useState<CreditCard[]>(seed?.cards ?? [])
+  const [enabled, setEnabled] = useState<boolean | null>(seed?.enabled ?? null)
+  const [loading, setLoading] = useState(!seed)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState(false)
   const [selected, setSelected] = useState<string | null>(initialCardId ?? null)
-  const [nome, setNome] = useState('')
-  const [dia, setDia] = useState('')
+  const [nome, setNome] = useState(seed?.cards.find(c => c.id === initialCardId)?.nome ?? '')
+  const [dia, setDia] = useState(() => { const initial = seed?.cards.find(c => c.id === initialCardId); return initial ? String(initial.dia_vencimento) : '' })
   const [first, setFirst] = useState(currentMonth)
   const [count, setCount] = useState('')
   const [draft, setDraft] = useState<{ mes_referencia: string; valor: string }[] | null>(null)
@@ -34,53 +39,32 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
 
   useEffect(() => {
     let active = true
-    getCreditCards().then(result => {
+    ;(seed ? Promise.resolve(seed) : getCreditCards()).then(result => {
       if (!active) return
       setCards(result.cards); setEnabled(result.enabled); setLoading(false)
       const initial = result.cards.find(c => c.id === initialCardId)
       if (initial) { setNome(initial.nome); setDia(String(initial.dia_vencimento)) }
     }).catch(() => { if (active) { setError('Não foi possível carregar os cartões. Tente novamente.'); setLoading(false) } })
     return () => { active = false }
-  }, [initialCardId])
+  }, [initialCardId, seed])
 
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    dialog.current?.focus()
-    return () => previous?.focus()
-  }, [])
-
-  useEffect(() => {
-    const root = dialog.current
-    function keys(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !busy) { e.preventDefault(); onClose() }
-      if (e.key !== 'Tab' || !root) return
-      const items = Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]'))
-      const first = items[0], last = items[items.length - 1]
-      if (!first) { e.preventDefault(); return }
-      if (e.shiftKey && (document.activeElement === first || document.activeElement === root)) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && (document.activeElement === last || document.activeElement === root)) { e.preventDefault(); first.focus() }
-    }
-    document.addEventListener('keydown', keys)
-    return () => document.removeEventListener('keydown', keys)
-  }, [onClose, busy])
-
-  useEffect(() => { if (created) dialog.current?.focus() }, [created])
 
   function choose(c?: CreditCard) {
     setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(c ? String(c.dia_vencimento) : '')
     setCreated(false); setFirst(currentMonth()); setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
   }
   async function run(action: () => Promise<{ success: boolean; error?: string }>, after?: () => void) {
-    if (mutationLock.current) return
+    if (mutationLock.current || refreshing) return
     mutationLock.current = true
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setNotice('')
     try {
       const result = await action()
       if (!result.success) { setError(result.error ?? 'Não foi possível salvar'); return }
       // Refresh the ledger even if the subsequent manager read fails.
-      router.refresh()
+      startRefresh(() => router.refresh())
       after?.()
-      try {
+      setNotice('Alteração salva com sucesso.')
+      if (!seed) try {
         const resultCards = await getCreditCards()
         setCards(resultCards.cards); setEnabled(resultCards.enabled)
       } catch { setError('Alteração salva, mas a lista não pôde ser atualizada. Recarregue os cartões.') }
@@ -101,18 +85,17 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   }
   function editInvoice(i: CardInvoice) { setInvoice({ id: i.id, month: i.mes_referencia, value: String(i.valor) }); setConfirm(null) }
 
-  return <div className="fixed inset-0 z-[70] flex items-center justify-center p-3">
-    <div className="absolute inset-0 bg-black/50" onClick={() => { if (!busy) onClose() }} />
-    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="cards-title" tabIndex={-1} className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
-      <div className="flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy} onClick={onClose}><X /></button></div>
+  return <ModalPortal onClose={() => { if (!busy) onClose() }} label="Cartões de crédito">
+    <div ref={dialog} tabIndex={-1} className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
+      <div className="flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy || refreshing} onClick={onClose}><X /></button></div>
       <p className="text-sm text-text-2 mb-4">Faturas entram nas Saídas. Evite duplicar valores no Diário ou em lançamentos antigos.</p>
       {error && <p role="alert" className="text-red mb-3">{error}</p>}
-      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={() => { router.refresh(); onClose() }}>Fechar</button></div></section> : <>
+      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy || refreshing} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy || refreshing} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={onClose}>Fechar</button></div></section> : <>
         <div className="flex gap-2 flex-wrap mb-4">
-          {cards.map(c => <button key={c.id} disabled={busy} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}>{c.nome}</button>)}
-          <button disabled={busy} className={button} onClick={() => choose()}>+ Novo cartão</button>
+          {cards.map(c => <button key={c.id} disabled={busy || refreshing} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}>{c.nome}</button>)}
+          <button disabled={busy || refreshing} className={button} onClick={() => choose()}>+ Novo cartão</button>
         </div>
-        <fieldset disabled={busy} className="space-y-3">
+        <fieldset disabled={busy || refreshing} className="space-y-3">
           <form className="space-y-2" onSubmit={e => {
             e.preventDefault()
             if (card) void run(() => updateCreditCard(card.id, nome, Number(dia)))
@@ -145,8 +128,10 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
           {confirm && card && <div role="alert" className="border border-border rounded-xl p-3 space-y-2"><p>{confirm.kind === 'card' ? 'Excluir este cartão e todas as suas faturas?' : 'Excluir esta fatura?'} A projeção será recalculada. As saídas avulsas permanecem.</p><button className="rounded-xl bg-red text-white px-3 py-2 text-sm" onClick={() => { void run(() => confirm.kind === 'card' ? deleteCreditCard(confirm.id) : deleteCardInvoice(card.id, confirm.id), () => { if (confirm.kind === 'card') choose(); else setConfirm(null) }) }}>Confirmar exclusão</button><button className="ml-3 text-sm" onClick={() => setConfirm(null)}>Cancelar</button></div>}
         </fieldset>
       </>}
-      {!loading && !created && <button disabled={busy} className="mt-4 text-accent text-sm" onClick={() => { void run(async () => ({ success: true })) }}>Recarregar cartões</button>}
+      {!loading && !created && <button disabled={busy || refreshing} className="mt-4 text-accent text-sm" onClick={() => { setLoading(true); getCreditCards().then(result => { setCards(result.cards); setEnabled(result.enabled) }).catch(() => setError('Não foi possível carregar os cartões.')).finally(() => setLoading(false)) }}>Recarregar cartões</button>}
+      {notice && <p role="status" className="text-sm text-green mt-3">{notice}</p>}
+      {refreshing && <p role="status" className="text-sm mt-3">Atualizando saldos…</p>}
       {busy && <p role="status" className="mt-3 text-sm">Salvando…</p>}
     </div>
-  </div>
+  </ModalPortal>
 }

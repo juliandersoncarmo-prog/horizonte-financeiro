@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom'
 export default function ModalPortal({ children, onClose, label }: {
   children: ReactNode; onClose: () => void; label: string
 }) {
-  const [container] = useState(() => typeof document === 'undefined' ? null : document.createElement('div'))
+  const [container] = useState(() => { if (typeof document === 'undefined') return null; const el = document.createElement('div'); el.dataset.hfModal = 'true'; return el })
   const panel = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   useEffect(() => { close.current = onClose }, [onClose])
@@ -23,7 +23,8 @@ export default function ModalPortal({ children, onClose, label }: {
     const focusable = () => [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? [])].filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true')
     ;(focusable()[0] ?? panel.current)?.focus()
     function keydown(event: KeyboardEvent) {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close.current(); return }
+      if ([...document.querySelectorAll('[data-hf-modal]')].at(-1) !== container) return
+      if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); return }
       if (event.key !== 'Tab') return
       const fields = focusable(), first = fields[0], last = fields.at(-1)
       if (!first) { event.preventDefault(); panel.current?.focus(); return }

@@ -105,6 +105,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
 
         <Link
           href="/configuracoes"
+          prefetch={false}
           className={navBtn(pathname === '/configuracoes')}
         >
           <Settings className="w-[18px] h-[18px] flex-none" />

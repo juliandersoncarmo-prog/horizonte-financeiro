@@ -17,6 +17,7 @@ export default function InlineDailyActual({ day }: { day: DayResult }) {
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   async function save() {
     if (lock.current) return
     const amount = value.trim() === '' ? null : Number(value.replace(',', '.'))
@@ -25,7 +26,7 @@ export default function InlineDailyActual({ day }: { day: DayResult }) {
     try {
       const result = await saveDailyActual(day.date, amount)
       if (!result.success) { setError(result.error ?? 'Erro ao salvar.'); return }
-      close(); router.refresh()
+      close(); setNotice('Diário salvo com sucesso.'); router.refresh()
     } catch { setError('Falha de comunicação. Tente novamente.') }
     finally { lock.current = false; editor.setSaving(false); setBusy(false) }
   }
@@ -39,8 +40,9 @@ export default function InlineDailyActual({ day }: { day: DayResult }) {
       <button type="button" disabled={busy} aria-label="Cancelar Diário" title="Cancelar" onClick={close} className="shrink-0 h-7 w-5 flex items-center justify-center text-text-3"><X size={14} /></button>
     </form> : <div className="flex items-center justify-center gap-1 h-7 min-w-0">
       <span className={`text-sm font-medium num whitespace-nowrap ${day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'}`}>{day.diarioRealizado != null || day.diarioPrevisto != null || day.diario > 0 ? `−${formatBRL(day.diario)}` : '—'}</span>
-      <button ref={pencil} aria-label={`Editar Diário em ${day.date}`} title="Editar Diário" onClick={() => { if (editor.open(day.date)) { setValue(day.diarioRealizado == null ? '' : String(day.diarioRealizado)); setError('') } }} className="shrink-0 h-7 w-5 flex items-center justify-center text-text-3 hover:text-accent"><Pencil size={12} /></button>
+      <button ref={pencil} aria-label={`Editar Diário em ${day.date}`} title="Editar Diário" onClick={() => { if (editor.open(day.date)) { setValue(day.diarioRealizado == null ? '' : String(day.diarioRealizado)); setError(''); setNotice('') } }} className="shrink-0 h-7 w-5 flex items-center justify-center text-text-3 hover:text-accent">{notice ? <Check size={12} className="text-green" /> : <Pencil size={12} />}</button>
     </div>}
+    {notice && !editing && <span role="status" className="sr-only">{notice}</span>}
     {editing && error && <span id={`daily-error-${day.date}`} role="alert" className="absolute z-20 top-full left-0 w-48 rounded border border-border bg-surface p-2 text-xs text-red shadow">{error}</span>}
   </div>
 }

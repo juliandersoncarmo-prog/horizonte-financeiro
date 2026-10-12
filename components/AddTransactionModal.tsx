@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ModalPortal from './ModalPortal'
 import { X } from 'lucide-react'
@@ -17,6 +17,7 @@ interface Props {
 
 export default function AddTransactionModal({ tipo, onClose, defaultDate }: Props) {
   const router = useRouter()
+  const lock = useRef(false)
   const today  = new Date().toISOString().split('T')[0]
 
   const [incluidoDiario, setIncluidoDiario] = useState(false)
@@ -31,11 +32,20 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   const [error,      setError]      = useState<string | null>(null)
   const [success,    setSuccess]    = useState(false)
 
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(onClose, 800)
+    return () => clearTimeout(timer)
+  }, [success, onClose])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (lock.current) return
+    lock.current = true
     setLoading(true)
     setError(null)
 
+    try {
     const result = mode === 'avulsa'
       ? await addTransaction({ tipo, valor: Number(valor), descricao, data, incluido_diario: incluidoDiario })
       : await addRecurringRule({
@@ -52,10 +62,13 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
     if (result.success) {
       router.refresh()
       setSuccess(true)
-      setTimeout(onClose, 800)
+      lock.current = true
     } else {
+      lock.current = false
       setError(result.error ?? 'Erro ao salvar')
     }
+    } catch { lock.current = false; setError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
+    finally { setLoading(false) }
   }
 
   const isEntrada  = tipo === 'entrada'
@@ -68,7 +81,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   const labelClass = 'text-xs font-semibold uppercase tracking-widest text-text-3 block mb-1'
 
   return (
-    <ModalPortal onClose={onClose} label={isEntrada ? 'Nova entrada' : 'Nova saída'}>
+    <ModalPortal onClose={() => { if (!loading) onClose() }} label={isEntrada ? 'Nova entrada' : 'Nova saída'}>
       <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
 
         {/* Header */}
@@ -76,7 +89,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
           <h2 className={`text-base font-semibold ${titleColor}`}>
             {isEntrada ? '+ Nova entrada' : '+ Nova saída'}
           </h2>
-          <button aria-label="Fechar" onClick={onClose} className="text-text-3 hover:text-text transition-colors">
+          <button aria-label="Fechar" disabled={loading} onClick={onClose} className="text-text-3 hover:text-text transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -225,7 +238,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
             )}
 
             {tipo === 'saida' && <label className="text-sm text-text"><input type="checkbox" checked={incluidoDiario} onChange={e => setIncluidoDiario(e.target.checked)} /> Incluída no total do Diário<p className="text-xs text-text-3">Marque somente se este valor estiver incluído no gasto variável total do dia. Não use para faturas de cartão.</p></label>}
-            {error && <p className="text-xs text-red">{error}</p>}
+            {error && <p role="alert" className="text-xs text-red">{error}</p>}
 
             <div className="flex gap-3 pt-1">
               <button

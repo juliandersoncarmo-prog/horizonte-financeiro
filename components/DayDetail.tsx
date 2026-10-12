@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X } from 'lucide-react'
 import type { DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
-import { updateTransaction, updateRecurringRule } from '@/app/actions'
+import { updateTransaction, updateRecurringRule, deleteTransaction, deleteRecurringRule } from '@/app/actions'
+import ModalPortal from './ModalPortal'
 import CreditCardsModal from './CreditCardsModal'
 import AddTransactionModal from './AddTransactionModal'
 
@@ -43,6 +44,11 @@ interface EditState {
 
 export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const router = useRouter()
+  const lock = useRef(false)
+  const [refreshing, startRefresh] = useTransition()
+  const [notice, setNotice] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  function closeEdit() { if (!lock.current) { setEditing(null); setConfirmDelete(false) } }
   const [cardId, setCardId] = useState<string | null>(null)
   const [addTipo,   setAddTipo]   = useState<'entrada' | 'saida' | null>(null)
   const [editing,   setEditing]   = useState<EditState | null>(null)
@@ -53,7 +59,6 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const weekday  = WEEKDAYS[new Date(day.date + 'T12:00:00').getDay()]
   const entradas = day.events.filter(e => e.tipo === 'entrada')
   const saidas   = day.events.filter(e => e.tipo === 'saida')
-  const includedTotal = saidas.filter(e => e.incluido_diario).reduce((sum, e) => sum + e.valor, 0)
 
   function openEdit(e: DayEvent) {
     if (e.cardId) { setCardId(e.cardId); return }
@@ -62,35 +67,35 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     if (!id) return
     setEditing({ id, kind, descricao: e.descricao, valor: String(e.valor), incluido_diario: e.incluido_diario ?? false })
     setEditError(null)
+    setConfirmDelete(false)
   }
 
-  async function handleSaveEdit(ev: React.FormEvent) {
-    ev.preventDefault()
-    if (!editing) return
-    setSaving(true)
-    setEditError(null)
-    const dados = { descricao: editing.descricao, valor: Number(editing.valor), incluido_diario: editing.incluido_diario }
-    const result = editing.kind === 'transaction'
-      ? await updateTransaction(editing.id, dados)
-      : await updateRecurringRule(editing.id, dados)
-    setSaving(false)
-    if (result.success) {
-      router.refresh()
-      setEditing(null)
-    } else {
-      setEditError(result.error ?? 'Erro ao salvar')
-    }
+  async function mutateEdit(remove: boolean) {
+    if (!editing || lock.current) return
+    lock.current = true; setSaving(true); setEditError(null)
+    try {
+      const dados = { descricao: editing.descricao, valor: Number(editing.valor), incluido_diario: editing.incluido_diario }
+      const result = remove
+        ? editing.kind === 'transaction' ? await deleteTransaction(editing.id) : await deleteRecurringRule(editing.id, 'all-occurrences')
+        : editing.kind === 'transaction' ? await updateTransaction(editing.id, dados) : await updateRecurringRule(editing.id, dados)
+      if (!result.success) { setEditError(result.error ?? 'Não foi possível concluir. Tente novamente.'); return }
+      setNotice(remove ? 'Lançamento excluído com sucesso.' : 'Lançamento atualizado com sucesso.')
+      setEditing(null); setConfirmDelete(false)
+      startRefresh(() => router.refresh())
+    } catch { setEditError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
+    finally { lock.current = false; setSaving(false) }
   }
+  async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); await mutateEdit(false) }
 
   const fieldClass = 'w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
   const labelClass = 'text-xs font-semibold uppercase tracking-widest text-text-3 block mb-1'
 
-  function EventRow({ e, isEntrada }: { e: DayEvent; isEntrada: boolean }) {
+  function eventRow({ e, isEntrada }: { e: DayEvent; isEntrada: boolean }) {
     const bg       = isEntrada ? 'bg-green-soft' : 'bg-red-soft'
     const valColor = isEntrada ? 'text-green'     : 'text-red'
     const prefix   = isEntrada ? ''                : '−'
     return (
-      <div className={`flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
+      <div key={e.id ?? e.ruleId ?? e.invoiceId} className={`flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
         <p className="text-sm font-medium text-text truncate min-w-0">{e.descricao}{e.incluido_diario ? " · incluída no Diário" : ""}</p>
         <div className="flex items-center gap-2 ml-3 flex-none">
           <span className={`text-sm font-semibold num ${valColor}`}>{prefix}{formatBRL(e.valor)}</span>
@@ -107,12 +112,11 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <>
+    <ModalPortal onClose={() => { if (!lock.current) onClose() }} label="Detalhes do dia">
 
       {/* Modal */}
-      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto">
+      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div>
@@ -126,7 +130,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             <p className="text-[11px] text-text-3 mt-0.5">saldo projetado</p>
           </div>
           <button
-            onClick={onClose}
+            aria-label="Fechar detalhes" onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-text-3 hover:bg-surface-2 hover:text-text transition-colors flex-none mt-0.5"
           >
             ✕
@@ -139,7 +143,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             <section>
               <p className="text-[10px] font-bold text-text-3 uppercase tracking-widest mb-2">Entradas</p>
               <div className="flex flex-col gap-1.5">
-                {entradas.map((e, i) => <EventRow key={i} e={e} isEntrada={true} />)}
+                {entradas.map(e => eventRow({ e, isEntrada: true }))}
               </div>
             </section>
           )}
@@ -148,23 +152,14 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             <section>
               <p className="text-[10px] font-bold text-text-3 uppercase tracking-widest mb-2">Saídas</p>
               <div className="flex flex-col gap-1.5">
-                {saidas.map((e, i) => <EventRow key={i} e={e} isEntrada={false} />)}
+                {saidas.map(e => eventRow({ e, isEntrada: false }))}
               </div>
             </section>
           )}
 
-          <section>
-            <p className="text-[10px] font-bold text-text-3 uppercase tracking-widest mb-2">Diário</p>
-            <div className="text-sm bg-surface-2 rounded-xl p-3 space-y-2">
-              <p className="text-text-3">Previsto: {formatBRL(day.diarioPrevisto ?? day.diario)}</p>
-              <p className="text-text font-semibold">Realizado: {day.diarioRealizado == null ? 'Não informado' : formatBRL(day.diarioRealizado)}</p>
-              <p className="text-text-2">Diferença (realizado − previsto): {day.diarioRealizado == null ? '—' : formatBRL(day.diarioRealizado - (day.diarioPrevisto ?? day.diario))}</p>
-              <p className="text-xs text-text-3">Sem registro, vale o previsto. O total realizado deve incluir as saídas marcadas como incluídas no Diário. Faturas de cartão ficam separadas.</p>
-              {includedTotal > day.diario && <p role="alert" className="text-orange">As saídas incluídas somam {formatBRL(includedTotal)}, acima do Diário. Corrija o total diário ou retire a marcação das saídas que ficam separadas.</p>}
-            </div>
-          </section>
-
-          {entradas.length === 0 && saidas.length === 0 && day.diario === 0 && (
+          {notice && <p role="status" className="text-sm text-green">{notice}</p>}
+          {refreshing && <p role="status" className="text-sm text-text-3">Atualizando saldos…</p>}
+          {entradas.length === 0 && saidas.length === 0 && (
             <p className="text-sm text-text-3 text-center py-6">Nenhum evento neste dia</p>
           )}
         </div>
@@ -186,6 +181,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
         </div>
       </div>
 
+    </ModalPortal>
       {cardId && <CreditCardsModal initialCardId={cardId} onClose={() => setCardId(null)} />}
 
       {/* Modal de adição */}
@@ -199,14 +195,13 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
 
       {/* Modal de edição inline */}
       {editing && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setEditing(null)} />
-          <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-w-sm mx-4 p-6">
+        <ModalPortal onClose={closeEdit} label={editing.kind === 'rule' ? 'Editar regra recorrente' : 'Editar lançamento'}>
+          <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-text">
                 {editing.kind === 'rule' ? 'Editar recorrente' : 'Editar lançamento'}
               </h2>
-              <button onClick={() => setEditing(null)} className="text-text-3 hover:text-text transition-colors">
+              <button disabled={saving} aria-label="Fechar edição" onClick={closeEdit} className="text-text-3 hover:text-text transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -239,11 +234,11 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                 />
               </div>
               <label className="text-sm text-text"><input type="checkbox" checked={editing.incluido_diario} onChange={e => setEditing(s => s && ({ ...s, incluido_diario: e.target.checked }))} /> Incluída no total do Diário (somente saídas)</label>
-              {editError && <p className="text-xs text-red">{editError}</p>}
+              {editError && <p role="alert" className="text-xs text-red">{editError}</p>}
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setEditing(null)}
+                  disabled={saving} aria-label="Fechar edição" onClick={closeEdit}
                   className="flex-1 border border-border rounded-xl py-2 text-sm text-text-2 hover:bg-surface-2 transition-colors"
                 >
                   Cancelar
@@ -256,10 +251,16 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                   {saving ? 'Salvando…' : 'Salvar'}
                 </button>
               </div>
+              <button type="button" disabled={saving} onClick={() => setConfirmDelete(true)} className="text-red text-sm border border-red rounded-xl py-2 disabled:opacity-50">{editing.kind === 'rule' ? 'Excluir regra recorrente' : 'Excluir lançamento'}</button>
+              {confirmDelete && <div role="alert" className="text-sm bg-red-soft rounded-xl p-3 space-y-3">
+                <p>{editing.kind === 'rule' ? 'Excluir a regra inteira? Todas as ocorrências geradas por ela, passadas e futuras, desaparecerão da projeção e do Resumo Mensal. Lançamentos avulsos permanecem. Não há exclusão de uma ocorrência isolada.' : 'Excluir somente este lançamento? Os saldos e o Resumo Mensal serão recalculados.'}</p>
+                <button type="button" disabled={saving} onClick={() => void mutateEdit(true)} className="bg-red text-white rounded-lg px-3 py-2 disabled:opacity-50">{saving ? 'Excluindo…' : 'Confirmar exclusão'}</button>
+                <button type="button" disabled={saving} onClick={() => setConfirmDelete(false)} className="ml-3">Cancelar exclusão</button>
+              </div>}
             </form>
           </div>
-        </div>
+        </ModalPortal>
       )}
-    </div>
+    </>
   )
 }

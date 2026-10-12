@@ -72,6 +72,7 @@ function isRuleActiveOnDate(
     occurrence = distance / 7 + 1
   } else {
     if (!firingDays(rule, year, month).includes(day)) return false
+    if (rule.modo_termino !== 'ocorrencias' || !rule.valor_termino) return true
     const [iy, im] = rule.data_inicio.split('-').map(Number)
     for (let index = iy * 12 + im - 1; index <= year * 12 + month; index++) {
       const y = Math.floor(index / 12), m = index % 12
@@ -98,6 +99,16 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
   const { settings, recurringRules, transactions, dailyBudgets, horizonMonths } = input
 
   const invoices = cardEvents(input.cards ?? [])
+  function indexByDate<T extends { data: string }>(rows: T[]) {
+    const result = new Map<string, T[]>()
+    for (const row of rows) {
+      const group = result.get(row.data)
+      if (group) group.push(row); else result.set(row.data, [row])
+    }
+    return result
+  }
+  const transactionsByDate = indexByDate(transactions)
+  const invoicesByDate = indexByDate(invoices)
 
   const [anchorYear, anchorMonth] = settings.data_ancora.split('-').map(Number)
   const startMonth = anchorMonth - 1
@@ -157,8 +168,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         }
       }
 
-      for (const tx of transactions) {
-        if (tx.data !== dateISO) continue
+      for (const tx of transactionsByDate.get(dateISO) ?? []) {
 
         events.push({
           id: tx.id,
@@ -178,8 +188,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         }
       }
 
-      for (const invoice of invoices) {
-        if (invoice.data !== dateISO) continue
+      for (const invoice of invoicesByDate.get(dateISO) ?? []) {
         events.push(invoice)
         saldo = money(saldo - money(invoice.valor))
         totalSaidas = money(totalSaidas + money(invoice.valor))

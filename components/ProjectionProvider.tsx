@@ -17,6 +17,7 @@ export function ProjectionProvider({ projection, children }: { projection: Proje
   const saving = useRef(false)
   return <ProjectionContext.Provider value={projection}><DailyEditorContext.Provider value={{ date, setSaving: busy => { saving.current = busy }, open: next => { if (saving.current) return false; setDate(next); return true }, close: () => setDate(null) }}>{children}</DailyEditorContext.Provider></ProjectionContext.Provider>
 }
+export function useOptionalProjection() { return useContext(ProjectionContext) }
 export function useProjection() {
   const projection = useContext(ProjectionContext)
   if (!projection) throw new Error('Projeção indisponível')
