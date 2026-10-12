@@ -38,7 +38,7 @@ export default function ResetButton() {
             <h2 className="text-base font-semibold text-text mb-3">Tem certeza?</h2>
             <p className="text-sm text-text-2 mb-6">
               Isso apagará <strong>TODOS</strong> os seus dados: transações, regras recorrentes,
-              orçamentos e saldo inicial. O sistema voltará ao estado inicial.
+              orçamentos, realizações do Diário, cartões/faturas habilitados e saldo inicial. O sistema voltará ao estado inicial.
             </p>
             {error && <p className="text-xs text-red mb-4">{error}</p>}
             <div className="flex gap-3">

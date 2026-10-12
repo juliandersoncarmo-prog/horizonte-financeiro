@@ -3,8 +3,9 @@
 import { useState, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { TrendingUp, TrendingDown, List, Settings, LogOut, LayoutDashboard } from 'lucide-react'
+import { TrendingUp, TrendingDown, List, CreditCard, Settings, LogOut, LayoutDashboard } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
+import CreditCardsModal from './CreditCardsModal'
 import DiarioModal from './DiarioModal'
 import { signOut } from '@/app/actions'
 
@@ -25,6 +26,7 @@ export default function Sidebar() {
   const pathname = usePathname()
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
+  const [showCards, setShowCards] = useState(false)
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light' as const)
 
   useEffect(() => {
@@ -89,6 +91,11 @@ export default function Sidebar() {
           Diário
         </button>
 
+        <button onClick={() => setShowCards(true)} className={navBtn(false)}>
+          <CreditCard className="w-[18px] h-[18px] flex-none" />
+          Cartões
+        </button>
+
         <Link
           href="/configuracoes"
           className={navBtn(pathname === '/configuracoes')}
@@ -130,6 +137,8 @@ export default function Sidebar() {
       {modal && (
         <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
       )}
+
+      {showCards && <CreditCardsModal onClose={() => setShowCards(false)} />}
 
       {showDiario && (
         <DiarioModal onClose={() => setShowDiario(false)} />

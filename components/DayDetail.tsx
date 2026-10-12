@@ -6,6 +6,7 @@ import { Pencil, X } from 'lucide-react'
 import type { DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
 import { updateTransaction, updateRecurringRule, saveDailyActual } from '@/app/actions'
+import CreditCardsModal from './CreditCardsModal'
 import AddTransactionModal from './AddTransactionModal'
 
 const COLOR_TEXT: Record<string, string> = {
@@ -42,6 +43,7 @@ interface EditState {
 
 export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const router = useRouter()
+  const [cardId, setCardId] = useState<string | null>(null)
   const [addTipo,   setAddTipo]   = useState<'entrada' | 'saida' | null>(null)
   const [editing,   setEditing]   = useState<EditState | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
@@ -64,6 +66,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const includedTotal = saidas.filter(e => e.incluido_diario).reduce((sum, e) => sum + e.valor, 0)
 
   function openEdit(e: DayEvent) {
+    if (e.cardId) { setCardId(e.cardId); return }
     const id   = e.id ?? e.ruleId
     const kind = e.id ? 'transaction' : 'rule'
     if (!id) return
@@ -199,6 +202,8 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
           </button>
         </div>
       </div>
+
+      {cardId && <CreditCardsModal initialCardId={cardId} onClose={() => setCardId(null)} />}
 
       {/* Modal de adição */}
       {addTipo && (

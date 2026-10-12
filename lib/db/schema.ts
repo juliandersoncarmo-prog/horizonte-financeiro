@@ -10,6 +10,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  foreignKey,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -100,3 +101,22 @@ export const dailyActualsTable = pgTable('daily_actuals', {
   valor: numeric('valor', { precision: 15, scale: 2 }).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex('daily_actuals_user_date_idx').on(t.user_id, t.data)])
+
+// SQL migrations remain authoritative for auth.users FKs, RLS and checks.
+export const creditCardsTable = pgTable('credit_cards', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  user_id: uuid('user_id').notNull(),
+  nome: text('nome').notNull(),
+  dia_vencimento: integer('dia_vencimento').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex('credit_cards_id_user_idx').on(t.id, t.user_id), index('credit_cards_user_idx').on(t.user_id)])
+
+export const cardInvoicesTable = pgTable('card_invoices', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  user_id: uuid('user_id').notNull(),
+  card_id: uuid('card_id').notNull(),
+  mes_referencia: text('mes_referencia').notNull(),
+  valor: numeric('valor', { precision: 15, scale: 2 }).notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex('card_invoices_owner_card_month_idx').on(t.user_id, t.card_id, t.mes_referencia),
+  foreignKey({ columns: [t.card_id, t.user_id], foreignColumns: [creditCardsTable.id, creditCardsTable.user_id] }).onDelete('cascade')])

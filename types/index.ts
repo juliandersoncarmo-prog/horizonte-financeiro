@@ -30,6 +30,8 @@ export interface Settings {
 }
 
 export interface DayEvent {
+  cardId?: string
+  invoiceId?: string
   id?: string      // set for avulsa transactions
   ruleId?: string  // set for recurring rule occurrences
   descricao: string
@@ -83,6 +85,7 @@ export interface Transaction {
 }
 
 export interface ProjectionInput {
+  cards?: CreditCard[]
   settings: Settings
   recurringRules: RecurringRule[]
   transactions: Transaction[]
@@ -93,3 +96,6 @@ export interface ProjectionInput {
 }
 
 export interface DailyActual { data: string; valor: number }
+
+export interface CardInvoice { id: string; mes_referencia: string; valor: number }
+export interface CreditCard { id: string; nome: string; dia_vencimento: number; invoices: CardInvoice[] }

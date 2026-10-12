@@ -1,3 +1,4 @@
+import { cardEvents } from '@/lib/cards'
 import type {
   ProjectionInput,
   ProjectionResult,
@@ -96,6 +97,8 @@ export function projectionHorizon(anchor: string, start: string, months: number)
 export function runProjection(input: ProjectionInput): ProjectionResult {
   const { settings, recurringRules, transactions, dailyBudgets, horizonMonths } = input
 
+  const invoices = cardEvents(input.cards ?? [])
+
   const [anchorYear, anchorMonth] = settings.data_ancora.split('-').map(Number)
   const startMonth = anchorMonth - 1
   const startYear = anchorYear
@@ -173,6 +176,13 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
           saldo = money(saldo - money(tx.valor))
           totalSaidas = money(totalSaidas + money(tx.valor))
         }
+      }
+
+      for (const invoice of invoices) {
+        if (invoice.data !== dateISO) continue
+        events.push(invoice)
+        saldo = money(saldo - money(invoice.valor))
+        totalSaidas = money(totalSaidas + money(invoice.valor))
       }
 
       const inSum  = money(events.filter(e => e.tipo === 'entrada').reduce((a, e) => a + e.valor, 0))

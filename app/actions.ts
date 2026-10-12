@@ -1,5 +1,6 @@
 'use server'
 
+import { getCreditCards } from './card-actions'
 import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals } from '@/lib/db/queries'
@@ -19,12 +20,13 @@ export async function getProjectionData(startDate: string, months: number = 4): 
   try {
     const userId = await getAuthenticatedUserId()
 
-    const [settings, rawRules, transactions, rawBudgets, dailyActuals] = await Promise.all([
+    const [settings, rawRules, transactions, rawBudgets, dailyActuals, cardData] = await Promise.all([
       getUserSettings(userId),
       getRecurringRules(userId),
       getTransactions(userId),
       getDailyBudgets(userId),
       getDailyActuals(userId),
+      getCreditCards(),
     ])
 
 
@@ -65,7 +67,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
+    const result = runProjection({ cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
     return result
   } catch (err) {
     unstable_rethrow(err)
@@ -212,6 +214,7 @@ export async function resetAllData(): Promise<{ success: boolean; error?: string
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const results = await Promise.all([
+      ...(process.env.CARTOES_ENABLED === 'true' ? [supabase.from('credit_cards').delete().eq('user_id', userId)] : []),
       supabase.from('transactions').delete().eq('user_id', userId),
       supabase.from('recurring_rules').delete().eq('user_id', userId),
       supabase.from('daily_budgets').delete().eq('user_id', userId),
