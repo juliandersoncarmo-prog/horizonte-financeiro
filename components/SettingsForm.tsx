@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveSettings } from '@/app/actions'
 
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
+  const lock = useRef(false)
   const router  = useRouter()
   const [valor,   setValor]   = useState(saldoAtual != null ? String(saldoAtual) : '')
   const [data, setData] = useState(dataAncora)
@@ -18,9 +19,11 @@ export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!valor) return
+    if (!valor || lock.current) return
+    lock.current = true
     setLoading(true)
     setError(null)
+    try {
     const result = await saveSettings({
       saldo_abertura: Number(valor),
       data_ancora:    data,
@@ -28,9 +31,12 @@ export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
     setLoading(false)
     if (result.success) {
       router.push('/')
+      router.refresh()
     } else {
       setError(result.error ?? 'Erro ao salvar')
     }
+    } catch { setError('Falha de comunicação. Tente novamente.') }
+    finally { lock.current = false; setLoading(false) }
   }
 
   const fieldClass = 'w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'

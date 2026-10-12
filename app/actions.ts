@@ -209,6 +209,24 @@ export async function saveSettings(dados: {
   }
 }
 
+// Insert only: a concurrent first access must never overwrite an existing balance.
+export async function initializeSettings(dados: { saldo_abertura: number; data_ancora: string }): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!Number.isFinite(dados.saldo_abertura) || !/^\d{4}-\d{2}-\d{2}$/.test(dados.data_ancora)
+      || new Date(dados.data_ancora + 'T00:00:00Z').toISOString().slice(0, 10) !== dados.data_ancora) return { success: false, error: 'Informe um saldo válido e uma data existente.' }
+    const userId = await getAuthenticatedUserId()
+    if (await getUserSettings(userId)) return { success: false, error: 'Já existe configuração inicial. Altere-a em Configurações.' }
+    const { error } = await createServiceClient().from('settings').insert({ user_id: userId, ...dados })
+    if (error) return { success: false, error: 'Não foi possível criar a configuração. Recarregue antes de tentar novamente.' }
+    // The wizard refreshes when the user finishes the optional stage.
+    return { success: true }
+  } catch { return { success: false, error: 'Não foi possível verificar ou salvar a configuração inicial.' } }
+}
+
+export async function hasInitialSettings(): Promise<boolean> {
+  return (await getUserSettings(await getAuthenticatedUserId())) !== null
+}
+
 export async function resetAllData(): Promise<{ success: boolean; error?: string }> {
   try {
     const userId = await getAuthenticatedUserId()

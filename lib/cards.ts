@@ -37,3 +37,18 @@ export function cardEvents(cards: CreditCard[]): (DayEvent & { data: string })[]
       incluido_diario: false, data: invoiceDate(invoice.mes_referencia, card.dia_vencimento) }
   }))
 }
+
+export type InvoiceDraft = { mes_referencia: string; valor: string }
+// Preserve by competence, even when the first month changes. Callers confirm discarded values.
+export function resizeInvoiceDraft(previous: InvoiceDraft[], first: string, count: number) {
+  const months = invoiceMonths(first, count)
+  return {
+    rows: months.map(month => ({ mes_referencia: month, valor: previous.find(row => row.mes_referencia === month)?.valor ?? '' })),
+    discardsValues: previous.some(row => !months.includes(row.mes_referencia) && row.valor !== ''),
+  }
+}
+export function invoiceMonthLabel(month: string): string {
+  if (!validMonth(month)) throw new Error('Mês inválido')
+  const value = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(month + '-01T00:00:00Z'))
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}

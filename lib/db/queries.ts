@@ -7,14 +7,16 @@ export async function getUserSettings(userId: string): Promise<{ saldo_abertura:
       .from('settings')
       .select('saldo_abertura, data_ancora')
       .eq('user_id', userId)
-      .limit(1)
-      .single()
+      .maybeSingle()
     if (error) {
-      if (error.code === 'PGRST116') return null
       console.error('getUserSettings error:', error)
       throw new Error('Falha ao carregar configurações')
     }
-    return { saldo_abertura: Number(data.saldo_abertura), data_ancora: data.data_ancora as string }
+    if (data === null) return null
+    const balance = data.saldo_abertura == null ? NaN : Number(data.saldo_abertura)
+    const date = data.data_ancora
+    if (!Number.isFinite(balance) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(date + 'T00:00:00Z').toISOString().slice(0, 10) !== date) throw new Error('Configuração existente inválida; não foi sobrescrita.')
+    return { saldo_abertura: balance, data_ancora: date }
   } catch (err) {
     console.error('getUserSettings error:', err)
     throw err

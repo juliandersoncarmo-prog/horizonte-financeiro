@@ -1,5 +1,6 @@
 'use client'
 
+import InlineDailyActual from './InlineDailyActual'
 import type { MonthResult, DayResult } from '@/types'
 import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
 
@@ -80,7 +81,7 @@ export default function MonthColumn({
           const wday       = WEEKDAY[new Date(day.date + 'T12:00:00').getDay()]
 
           return (
-            <button
+            <div
               key={day.date}
               onClick={() => onDaySelect(day.date)}
               className={[
@@ -91,22 +92,23 @@ export default function MonthColumn({
               ].join(' ')}
             >
               {/* Data */}
-              <div className="flex items-baseline">
+              <button onClick={e => { e.stopPropagation(); onDaySelect(day.date) }} aria-label={`Abrir dia ${day.date}`} className="flex items-baseline">
                 <span className={`text-sm font-semibold num whitespace-nowrap ${day.isToday ? 'text-accent' : 'text-text'}`}>
                   {String(day.day).padStart(2, '0')}
                 </span>
                 <span className="text-xs text-text-3 ml-1 whitespace-nowrap">{wday}</span>
-              </div>
+              </button>
 
               {/* Coluna central */}
-              <div className="text-center">
+              <div className="text-center min-w-0">
+                {mode === 'diario' ? <InlineDailyActual day={day} /> : <>
                 <span className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :
                   mode === 'saida'   ? 'text-red'         :
                   day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'
                 }`}>
                   {midValue(day, mode)}
-                </span>
+                </span></>}
               </div>
 
               {/* Saldo */}
@@ -115,7 +117,7 @@ export default function MonthColumn({
                   {formatBRL(day.saldo)}
                 </span>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>

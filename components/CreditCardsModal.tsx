@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { createCreditCard, deleteCreditCard, deleteCardInvoice, getCreditCards, saveCardInvoice, updateCreditCard } from '@/app/card-actions'
-import { invoiceDate, invoiceMonths } from '@/lib/cards'
+import { invoiceDate, resizeInvoiceDraft, invoiceMonthLabel } from '@/lib/cards'
 import { formatBRL } from '@/lib/engine/projection'
 import type { CreditCard, CardInvoice } from '@/types'
 
@@ -14,6 +14,7 @@ const currentMonth = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America
 
 export default function CreditCardsModal({ onClose, initialCardId }: { onClose: () => void; initialCardId?: string }) {
   const router = useRouter()
+  const mutationLock = useRef(false)
   const dialog = useRef<HTMLDivElement>(null)
   const [cards, setCards] = useState<CreditCard[]>([])
   const [enabled, setEnabled] = useState<boolean | null>(null)
@@ -24,7 +25,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   const [nome, setNome] = useState('')
   const [dia, setDia] = useState('10')
   const [first, setFirst] = useState(currentMonth)
-  const [count, setCount] = useState('6')
+  const [count, setCount] = useState('')
   const [draft, setDraft] = useState<{ mes_referencia: string; valor: string }[] | null>(null)
   const [invoice, setInvoice] = useState<{ id: string | null; month: string; value: string } | null>(null)
   const [confirm, setConfirm] = useState<{ kind: 'card' | 'invoice'; id: string } | null>(null)
@@ -64,9 +65,11 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
 
   function choose(c?: CreditCard) {
     setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(String(c?.dia_vencimento ?? 10))
-    setDraft(null); setInvoice(null); setConfirm(null); setError('')
+    setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
   }
   async function run(action: () => Promise<{ success: boolean; error?: string }>, after?: () => void) {
+    if (mutationLock.current) return
+    mutationLock.current = true
     setBusy(true); setError('')
     try {
       const result = await action()
@@ -77,11 +80,19 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
       const resultCards = await getCreditCards()
       setCards(resultCards.cards); setEnabled(resultCards.enabled)
     } catch { setError('Falha de comunicação. Recarregue os cartões antes de tentar novamente.') }
-    finally { setBusy(false) }
+    finally { mutationLock.current = false; setBusy(false) }
   }
-  function generate() {
-    try { setDraft(invoiceMonths(first, Number(count)).map(month => ({ mes_referencia: month, valor: '' }))); setError('') }
-    catch { setError('Informe um primeiro mês válido e de 1 a 60 faturas.') }
+  function resize(nextFirst: string, nextCount: string) {
+    if (!nextCount) {
+      if (draft?.some(i => i.valor !== '') && !window.confirm('Remover os valores preenchidos das faturas?')) return
+      setCount(''); setFirst(nextFirst); setDraft(null); return
+    }
+    try {
+      const next = resizeInvoiceDraft(draft ?? [], nextFirst, Number(nextCount))
+      if (next.discardsValues && !window.confirm('Esta alteração remove faturas com valores preenchidos. Continuar?')) return
+      setDraft(next.rows)
+      setFirst(nextFirst); setCount(nextCount); setError('')
+    } catch { setError('Informe um primeiro mês válido e de 1 a 60 faturas.') }
   }
   function editInvoice(i: CardInvoice) { setInvoice({ id: i.id, month: i.mes_referencia, value: String(i.valor) }); setConfirm(null) }
 
@@ -109,17 +120,16 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
             <p className="text-xs text-text-3">Nos meses curtos, vence no último dia válido. Alterar o vencimento recalcula todas as faturas deste cartão, inclusive as passadas.</p>
             {card ? <div className="flex gap-3"><button className={button}>Salvar cartão</button><button type="button" className="text-red text-sm" onClick={() => setConfirm({ kind: 'card', id: card.id })}>Excluir cartão</button></div> : <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-sm">Primeiro mês<input type="month" min="1000-01" max="9999-12" required className={field} value={first} onChange={e => { setFirst(e.target.value); setDraft(null) }} /></label>
-                <label className="text-sm">Quantidade de faturas<input type="number" min="1" max="60" step="1" required className={field} value={count} onChange={e => { setCount(e.target.value); setDraft(null) }} /></label>
+                <label className="text-sm">Primeiro mês<input type="month" min="1000-01" max="9999-12" required className={field} value={first} onChange={e => { resize(e.target.value, count) }} /></label>
+                <label className="text-sm">Quantidade de faturas<input type="number" min="1" max="60" step="1" required className={field} value={count} onChange={e => { resize(first, e.target.value) }} /></label>
               </div>
-              <button type="button" className="text-accent text-sm" onClick={generate}>Preparar faturas</button>
-              {draft && <div className="space-y-2">{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-2 items-center gap-3 text-sm"><span>{i.mes_referencia} · valor (R$)</span><input aria-label={`Valor de ${i.mes_referencia}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={button}>Cadastrar cartão e faturas</button></div>}
+              {draft && <div className="space-y-2">{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-2 items-center gap-3 text-sm"><span>{invoiceMonthLabel(i.mes_referencia)} · valor (R$)</span><input aria-label={`Valor de ${invoiceMonthLabel(i.mes_referencia)}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={button}>Cadastrar cartão e faturas</button></div>}
             </>}
           </form>
           {card && <section className="space-y-3 border-t border-border pt-4">
             <div className="flex justify-between"><h3 className="font-semibold">Faturas de {card.nome}</h3><button className="text-accent text-sm" onClick={() => { setInvoice({ id: null, month: currentMonth(), value: '' }); setConfirm(null) }}>+ Fatura</button></div>
             {card.invoices.length === 0 && <p className="text-sm text-text-3">Nenhuma fatura cadastrada.</p>}
-            {card.invoices.map(i => <div key={i.id} className="flex flex-wrap gap-2 items-center justify-between rounded-xl bg-surface-2 px-3 py-2 text-sm"><span>{i.mes_referencia} · vence {invoiceDate(i.mes_referencia, card.dia_vencimento).split('-').reverse().join('/')}</span><span className="font-semibold">{formatBRL(i.valor)}</span><div className="flex gap-3"><button className="text-accent" onClick={() => editInvoice(i)}>Editar</button><button className="text-red" onClick={() => { setConfirm({ kind: 'invoice', id: i.id }); setInvoice(null) }}>Excluir</button></div></div>)}
+            {card.invoices.map(i => <div key={i.id} className="flex flex-wrap gap-2 items-center justify-between rounded-xl bg-surface-2 px-3 py-2 text-sm"><span>{invoiceMonthLabel(i.mes_referencia)} · vence {invoiceDate(i.mes_referencia, card.dia_vencimento).split('-').reverse().join('/')}</span><span className="font-semibold">{formatBRL(i.valor)}</span><div className="flex gap-3"><button className="text-accent" onClick={() => editInvoice(i)}>Editar</button><button className="text-red" onClick={() => { setConfirm({ kind: 'invoice', id: i.id }); setInvoice(null) }}>Excluir</button></div></div>)}
             {invoice && <form className="space-y-3 border border-border rounded-xl p-3" onSubmit={e => { e.preventDefault(); void run(() => saveCardInvoice(card.id, invoice.id, invoice.month, Number(invoice.value)), () => setInvoice(null)) }}>
               <h4 className="font-semibold">{invoice.id ? 'Editar fatura' : 'Incluir fatura'}</h4>
               <label className="text-sm block">Mês<input required type="month" min="1000-01" max="9999-12" className={field} value={invoice.month} onChange={e => setInvoice({ ...invoice, month: e.target.value })} /></label>
