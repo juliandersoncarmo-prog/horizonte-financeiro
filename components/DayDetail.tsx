@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Pencil, X } from 'lucide-react'
 import type { DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
-import { updateTransaction, updateRecurringRule, saveDailyActual } from '@/app/actions'
+import { updateTransaction, updateRecurringRule } from '@/app/actions'
 import CreditCardsModal from './CreditCardsModal'
 import AddTransactionModal from './AddTransactionModal'
 
@@ -48,16 +48,6 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const [editing,   setEditing]   = useState<EditState | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [saving,    setSaving]    = useState(false)
-
-  const [actual, setActual] = useState(day.diarioRealizado == null ? '' : String(day.diarioRealizado))
-  const [dailyError, setDailyError] = useState<string | null>(null)
-  async function saveDaily(value: number | null) {
-    setSaving(true)
-    const result = await saveDailyActual(day.date, value)
-    setSaving(false)
-    if (result.success) { setDailyError(null); router.refresh() }
-    else setDailyError(result.error ?? 'Erro ao salvar')
-  }
 
   const color    = balanceColor(day.saldo, hasData)
   const weekday  = WEEKDAYS[new Date(day.date + 'T12:00:00').getDay()]
@@ -169,15 +159,8 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
               <p className="text-text-3">Previsto: {formatBRL(day.diarioPrevisto ?? day.diario)}</p>
               <p className="text-text font-semibold">Realizado: {day.diarioRealizado == null ? 'Não informado' : formatBRL(day.diarioRealizado)}</p>
               <p className="text-text-2">Diferença (realizado − previsto): {day.diarioRealizado == null ? '—' : formatBRL(day.diarioRealizado - (day.diarioPrevisto ?? day.diario))}</p>
-              <form onSubmit={e => { e.preventDefault(); void saveDaily(Number(actual)) }} className="space-y-2">
-                <label htmlFor="daily-actual" className="text-text">Gasto variável total do dia (R$)</label>
-                <input id="daily-actual" required type="number" min="0" max="999999999" step="0.01" value={actual} onChange={e => setActual(e.target.value)} className={fieldClass} />
-                <button disabled={saving || actual === ''} className="bg-accent text-white rounded-lg px-3 py-2 disabled:opacity-50">Salvar gasto</button>
-                {day.diarioRealizado != null && <button type="button" disabled={saving} onClick={() => { setActual(''); void saveDaily(null) }} className="text-red ml-3">Excluir realizado</button>}
-              </form>
-              <p className="text-xs text-text-3">Sem registro, vale o previsto. Inclua aqui as saídas marcadas como incluídas no Diário. Faturas de cartão ficam separadas.</p>
+              <p className="text-xs text-text-3">Sem registro, vale o previsto. O total realizado deve incluir as saídas marcadas como incluídas no Diário. Faturas de cartão ficam separadas.</p>
               {includedTotal > day.diario && <p role="alert" className="text-orange">As saídas incluídas somam {formatBRL(includedTotal)}, acima do Diário. Corrija o total diário ou retire a marcação das saídas que ficam separadas.</p>}
-              {dailyError && <p role="alert" className="text-red">{dailyError}</p>}
             </div>
           </section>
 

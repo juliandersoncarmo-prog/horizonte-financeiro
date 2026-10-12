@@ -11,3 +11,5 @@ Fluxos disponíveis: saldo inicial, entradas/saídas avulsas e recorrentes, orç
 A atualização da projeção ocorre pelo evento local do adaptador, não por router.refresh com banco real. Os testes integration.test.ts exercitam esse adaptador junto ao motor/resumo e verificam serialização/releitura do estado, não E2E de navegador ou persistência Supabase.
 
 Restaurar exemplos apaga apenas os dados fictícios da demo. O armazenamento pode falhar por quota/política do navegador; a mutação retorna falha sem alterar o estado em memória nesse caso. Limpar dados do site remove os exemplos alterados. Não usar esta demonstração como banco pessoal.
+
+Sessão 9: novos dados da demo começam sem cartão fictício. Restaurar exemplos é a ação explícita que inclui o cartão de exemplo. Dados previamente salvos são preservados, inclusive cartões existentes. Confirmação de cadastro indica sucesso do armazenamento local; não representa gravação no Supabase. Diário usa lápis, confirmar/cancelar e somente uma célula ativa.

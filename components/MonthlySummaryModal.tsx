@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, X, CircleDollarSign } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Wallet, ArrowDownLeft, ArrowUpRight, TrendingUp, CreditCard, Landmark } from 'lucide-react'
 import { useProjection } from './ProjectionProvider'
 import { formatBRL, monthLabel } from '@/lib/engine/projection'
 import { monthSummary, summaryColor, summaryInitialIndex } from '@/lib/engine/month-summary'
@@ -32,7 +32,12 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
     return () => document.removeEventListener('keydown', keys)
   }, [onClose])
   const summary = month ? monthSummary(month) : null
-  const row = (label: string, value: number, color = 'text-text') => <div className="flex justify-between gap-3 py-2"><dt className="text-text-2 flex items-center gap-2"><CircleDollarSign aria-hidden="true" size={15} className="shrink-0 opacity-50" />{label}</dt><dd className={`font-semibold text-right ${color}`}>{formatBRL(value)}</dd></div>
+  const metrics = month && summary ? [
+    { label: 'Saldo no início do mês', value: month.saldoAbertura, Icon: Wallet, color: summaryColor(month.saldoAbertura) },
+    { label: 'Entradas', value: month.totalEntradas, Icon: ArrowDownLeft, color: 'text-green' },
+    { label: 'Saídas', value: month.totalSaidas, Icon: ArrowUpRight, color: 'text-red' },
+    { label: summary.resultado > 0 ? 'Sobrou no mês' : summary.resultado < 0 ? 'Faltou no mês' : 'Resultado do mês', value: summary.resultado, Icon: TrendingUp, color: summaryColor(summary.resultado) },
+  ] : []
   return <div className="fixed inset-0 z-[70] flex items-center justify-center p-3">
     <div className="absolute inset-0 bg-black/50" onClick={onClose} />
     <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1} className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
@@ -44,15 +49,19 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
           <button aria-label="Próximo mês" disabled={index >= months.length - 1} className="p-2 rounded-xl hover:bg-surface-2 disabled:opacity-30" onClick={() => setSelected(months[index + 1].label)}><ChevronRight /></button>
         </div>
         {month.days[0]?.day !== 1 && <p className="text-sm text-text-2 mb-3">Mês parcial: desde {month.days[0]?.date.split('-').reverse().join('/')}. A abertura é o saldo antes dos movimentos dessa data.</p>}
-        <dl className="text-sm divide-y divide-border">
-          {row('Saldo no início do mês', month.saldoAbertura, summaryColor(month.saldoAbertura))}
-          {row('Entradas', month.totalEntradas)}
-          {row('Saídas', month.totalSaidas)}
-          {row(summary.resultado > 0 ? 'Sobrou no mês' : summary.resultado < 0 ? 'Faltou no mês' : 'Resultado do mês', summary.resultado, summaryColor(summary.resultado))}
-          {row('Saldo previsto para o fim do mês', month.saldoFechamento, summaryColor(month.saldoFechamento))}
+        <dl className="grid grid-cols-2 gap-2.5">
+          {metrics.map(({ label, value, Icon, color }) => <div key={label} className="rounded-xl border border-border bg-surface-2 p-3 min-w-0">
+            <Icon aria-hidden="true" size={16} className={`mb-2 ${color} opacity-80`} />
+            <dt className="text-xs text-text-2 leading-snug min-h-8">{label}</dt>
+            <dd className={`text-lg sm:text-xl font-bold num break-words mt-1 ${color}`}>{formatBRL(value)}</dd>
+          </div>)}
         </dl>
-        <p className="text-xs text-text-2 mt-2 mb-4">Resultado mensal = entradas menos saídas. O saldo final inclui também o saldo de abertura.</p>
-        <div className="rounded-xl bg-surface-2 p-3"><dl className="text-sm">{row('Faturas de cartões', summary.cartoes)}</dl><p className="text-xs text-text-2">Este valor já está incluído nas Saídas.</p></div>
+        <div className="rounded-2xl border border-accent/20 bg-accent-soft p-4 mt-3">
+          <div className="flex gap-2 items-center text-accent mb-2"><Landmark aria-hidden="true" size={18} /><p className="text-sm font-medium">Saldo previsto para o fim do mês</p></div>
+          <p className={`text-3xl font-bold num break-words ${summaryColor(month.saldoFechamento)}`}>{formatBRL(month.saldoFechamento)}</p>
+          <p className="text-xs text-text-2 mt-2">Inclui o saldo de abertura e o resultado mensal.</p>
+        </div>
+        <div className="flex items-start gap-2.5 mt-4 text-text-2"><CreditCard aria-hidden="true" size={16} className="shrink-0 mt-0.5" /><div className="flex-1 text-xs"><p>Faturas de cartões <strong className="text-text float-right ml-2 num">{formatBRL(summary.cartoes)}</strong></p><p className="mt-1">Este valor já está incluído nas Saídas.</p></div></div>
         <p className="text-xs text-text-2 mt-3">Navegação limitada ao período da projeção do calendário.</p>
       </> : <p role="status">Nenhum mês disponível na projeção.</p>}
     </div>

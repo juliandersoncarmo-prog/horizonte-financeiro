@@ -8,7 +8,7 @@ import { invoiceDate, resizeInvoiceDraft, invoiceMonthLabel } from '@/lib/cards'
 import { formatBRL } from '@/lib/engine/projection'
 import type { CreditCard, CardInvoice } from '@/types'
 
-const field = 'w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
+const field = 'w-full border border-border rounded-xl px-3 py-1.5 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
 const button = 'rounded-xl px-3 py-2 text-sm bg-accent text-white disabled:opacity-50'
 const currentMonth = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit' }).format(new Date())
 
@@ -21,9 +21,10 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [created, setCreated] = useState(false)
   const [selected, setSelected] = useState<string | null>(initialCardId ?? null)
   const [nome, setNome] = useState('')
-  const [dia, setDia] = useState('10')
+  const [dia, setDia] = useState('')
   const [first, setFirst] = useState(currentMonth)
   const [count, setCount] = useState('')
   const [draft, setDraft] = useState<{ mes_referencia: string; valor: string }[] | null>(null)
@@ -63,9 +64,11 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
     return () => document.removeEventListener('keydown', keys)
   }, [onClose, busy])
 
+  useEffect(() => { if (created) dialog.current?.focus() }, [created])
+
   function choose(c?: CreditCard) {
-    setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(String(c?.dia_vencimento ?? 10))
-    setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
+    setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(c ? String(c.dia_vencimento) : '')
+    setCreated(false); setFirst(currentMonth()); setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
   }
   async function run(action: () => Promise<{ success: boolean; error?: string }>, after?: () => void) {
     if (mutationLock.current) return
@@ -77,8 +80,10 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
       // Refresh the ledger even if the subsequent manager read fails.
       router.refresh()
       after?.()
-      const resultCards = await getCreditCards()
-      setCards(resultCards.cards); setEnabled(resultCards.enabled)
+      try {
+        const resultCards = await getCreditCards()
+        setCards(resultCards.cards); setEnabled(resultCards.enabled)
+      } catch { setError('Alteração salva, mas a lista não pôde ser atualizada. Recarregue os cartões.') }
     } catch { setError('Falha de comunicação. Recarregue os cartões antes de tentar novamente.') }
     finally { mutationLock.current = false; setBusy(false) }
   }
@@ -102,28 +107,28 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
       <div className="flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy} onClick={onClose}><X /></button></div>
       <p className="text-sm text-text-2 mb-4">Cada fatura gera uma saída no vencimento. Não repita seu valor em Saídas nem no Diário. Lançamentos antigos permanecem separados; revise-os antes de cadastrar faturas dos mesmos meses.</p>
       {error && <p role="alert" className="text-red mb-3">{error}</p>}
-      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : <>
+      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={() => { router.refresh(); onClose() }}>Fechar</button></div></section> : <>
         <div className="flex gap-2 flex-wrap mb-4">
           {cards.map(c => <button key={c.id} disabled={busy} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}>{c.nome}</button>)}
           <button disabled={busy} className={button} onClick={() => choose()}>+ Novo cartão</button>
         </div>
-        <fieldset disabled={busy} className="space-y-4">
-          <form className="space-y-3" onSubmit={e => {
+        <fieldset disabled={busy} className="space-y-3">
+          <form className="space-y-2" onSubmit={e => {
             e.preventDefault()
             if (card) void run(() => updateCreditCard(card.id, nome, Number(dia)))
-            else if (draft) void run(() => createCreditCard({ nome, dia_vencimento: Number(dia), invoices: draft.map(i => ({ mes_referencia: i.mes_referencia, valor: Number(i.valor) })) }), () => choose())
+            else if (draft) void run(() => createCreditCard({ nome, dia_vencimento: Number(dia), invoices: draft.map(i => ({ mes_referencia: i.mes_referencia, valor: Number(i.valor) })) }), () => setCreated(true))
           }}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <label className="text-sm">Nome do cartão<input required maxLength={100} className={field} value={nome} onChange={e => setNome(e.target.value)} /></label>
               <label className="text-sm">Dia de vencimento<input required type="number" min="1" max="31" step="1" className={field} value={dia} onChange={e => setDia(e.target.value)} /></label>
             </div>
             <p className="text-xs text-text-3">Nos meses curtos, vence no último dia válido. Alterar o vencimento recalcula todas as faturas deste cartão, inclusive as passadas.</p>
             {card ? <div className="flex gap-3"><button className={button}>Salvar cartão</button><button type="button" className="text-red text-sm" onClick={() => setConfirm({ kind: 'card', id: card.id })}>Excluir cartão</button></div> : <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <label className="text-sm">Primeiro mês<input type="month" min="1000-01" max="9999-12" required className={field} value={first} onChange={e => { resize(e.target.value, count) }} /></label>
                 <label className="text-sm">Quantidade de faturas<input type="number" min="1" max="60" step="1" required className={field} value={count} onChange={e => { resize(first, e.target.value) }} /></label>
               </div>
-              {draft && <div className="space-y-2">{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-2 items-center gap-3 text-sm"><span>{invoiceMonthLabel(i.mes_referencia)} · valor (R$)</span><input aria-label={`Valor de ${invoiceMonthLabel(i.mes_referencia)}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={button}>Cadastrar cartão e faturas</button></div>}
+              {draft && <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5"><p className="text-xs text-text-3 sm:col-span-2">Valores das faturas (R$)</p>{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-[1fr_100px] items-center gap-2 text-xs"><span>{invoiceMonthLabel(i.mes_referencia)}</span><input aria-label={`Valor de ${invoiceMonthLabel(i.mes_referencia)}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={`${button} sm:col-span-2 mt-2`}>Cadastrar cartão e faturas</button></div>}
             </>}
           </form>
           {card && <section className="space-y-3 border-t border-border pt-4">
@@ -140,7 +145,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
           {confirm && card && <div role="alert" className="border border-border rounded-xl p-3 space-y-2"><p>{confirm.kind === 'card' ? 'Excluir este cartão e todas as suas faturas?' : 'Excluir esta fatura?'} A projeção será recalculada. As saídas avulsas permanecem.</p><button className="rounded-xl bg-red text-white px-3 py-2 text-sm" onClick={() => { void run(() => confirm.kind === 'card' ? deleteCreditCard(confirm.id) : deleteCardInvoice(card.id, confirm.id), () => { if (confirm.kind === 'card') choose(); else setConfirm(null) }) }}>Confirmar exclusão</button><button className="ml-3 text-sm" onClick={() => setConfirm(null)}>Cancelar</button></div>}
         </fieldset>
       </>}
-      {!loading && <button disabled={busy} className="mt-4 text-accent text-sm" onClick={() => { void run(async () => ({ success: true })) }}>Recarregar cartões</button>}
+      {!loading && !created && <button disabled={busy} className="mt-4 text-accent text-sm" onClick={() => { void run(async () => ({ success: true })) }}>Recarregar cartões</button>}
       {busy && <p role="status" className="mt-3 text-sm">Salvando…</p>}
     </div>
   </div>
