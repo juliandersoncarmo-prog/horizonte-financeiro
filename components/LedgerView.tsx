@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TrendingUp, Download, Upload } from 'lucide-react'
 import type { ProjectionResult, DayResult } from '@/types'
 import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
@@ -9,7 +9,6 @@ import MonthColumn, { type Mode } from './MonthColumn'
 import DayDetail from './DayDetail'
 import LedgerControls from './LedgerControls'
 
-const VISIBLE = 4
 
 const MONTHS_SHORT = ['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.']
 
@@ -24,6 +23,13 @@ interface LedgerViewProps {
 
 export default function LedgerView({ projection }: LedgerViewProps) {
   const { months } = projection
+  const [visible, setVisible] = useState(4)
+  useEffect(() => {
+    const update = () => setVisible(window.innerWidth >= 1024 ? 4 : window.innerWidth >= 640 ? 2 : 1)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
   const todayLabel = useMemo(() => todayFormatted(), [])
 
   const todayMonthIdx = useMemo(
@@ -35,7 +41,9 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [mode,         setMode]         = useState<Mode>('diario')
 
-  const visibleMonths = months.slice(startIndex, startIndex + VISIBLE)
+  const maxStart = Math.max(0, months.length - visible)
+  const safeStart = Math.min(startIndex, maxStart)
+  const visibleMonths = months.slice(safeStart, safeStart + visible)
 
   const selectedDay = useMemo<DayResult | null>(
     () => selectedDate ? (months.flatMap(m => m.days).find(d => d.date === selectedDate) ?? null) : null,
@@ -47,7 +55,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
     [months],
   )
 
-  const currentMonth = months[startIndex] ?? months[0]
+  const currentMonth = months[safeStart] ?? months[0]
   const kpiSaldo    = todayDay?.saldo ?? projection.settings.saldo_abertura
   const kpiEntradas = currentMonth?.totalEntradas ?? 0
   const kpiSaidas   = currentMonth?.totalSaidas   ?? 0
@@ -93,8 +101,8 @@ export default function LedgerView({ projection }: LedgerViewProps) {
       {/* Controls */}
       <LedgerControls
         months={months}
-        startIndex={startIndex}
-        visible={VISIBLE}
+        startIndex={safeStart}
+        visible={visible}
         onStartChange={setStartIndex}
       />
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
 import InlineDailyActual from './InlineDailyActual'
 import type { MonthResult, DayResult } from '@/types'
 import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
@@ -36,6 +37,7 @@ interface MonthColumnProps {
 export default function MonthColumn({
   month, selectedDate, onDaySelect, mode, onModeChange, className, hasData,
 }: MonthColumnProps) {
+  const exhausted = exhaustedDailyBudget(month)
   return (
     <div className={`flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
 
@@ -55,6 +57,11 @@ export default function MonthColumn({
           </span>
         </div>
       </div>
+
+      {mode === 'diario' && exhausted && <div role="status" className="px-3 py-2 text-xs text-orange bg-orange-soft border-b border-border flex-none">
+        <p className="font-semibold">Orçamento do Diário esgotado</p>
+        <p>Desde {exhausted.split('-').reverse().join('/')}, os dias sem lançamento têm previsão de R$ 0,00. Continue registrando gastos pelo lápis; eles serão descontados do saldo. Para ampliar o limite, revise o orçamento no menu Diário (a alteração global também vale para os próximos meses).</p>
+      </div>}
 
       {/* Column headers — same grid as day rows */}
       <div className="grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
