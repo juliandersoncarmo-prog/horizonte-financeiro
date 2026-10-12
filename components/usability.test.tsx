@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ProjectionProvider } from './ProjectionProvider'
 import InlineDailyActual from './InlineDailyActual'
+import MonthColumn from './MonthColumn'
 import CreditCardsModal from './CreditCardsModal'
 import MonthlySummaryModal from './MonthlySummaryModal'
 import { runProjection } from '@/lib/engine/projection'
@@ -38,3 +39,31 @@ async function submit() { await act(() => host.querySelector('form')!.dispatchEv
 it('preserves invoice values when increasing and when cancelling a reduction', async () => { const fields = await cardForm(); await input(fields[3], '3'); expect([...host.querySelectorAll<HTMLInputElement>('input[aria-label^="Valor de"]')].map(i => i.value)).toEqual(['0', '100', '']); window.confirm = vi.fn(() => false); await input(fields[3], '1'); expect(host.querySelectorAll('input[aria-label^="Valor de"]')).toHaveLength(3) })
 it('shows success only after persistence, prevents duplicates and clears for another card', async () => { let finish!: (value: { success: boolean }) => void; mocks.create.mockReturnValue(new Promise(resolve => { finish = resolve })); await cardForm(); await submit(); expect(host.textContent).not.toContain('Cartão cadastrado!'); await submit(); expect(mocks.create).toHaveBeenCalledTimes(1); await act(() => finish({ success: true })); expect(host.textContent).toContain('Cartão cadastrado!'); expect(host.textContent).toContain('As faturas foram incluídas na projeção.'); await click('Cadastrar outro'); const fields = host.querySelectorAll('input'); expect([fields[0].value, fields[1].value, fields[3].value]).toEqual(['', '', '']); expect(host.querySelector('input[aria-label^="Valor de"]')).toBeNull() })
 it('keeps failed card draft and closes success via Fechar', async () => { mocks.create.mockResolvedValueOnce({ success: false, error: 'Falha' }); const close = vi.fn(); await cardForm(); await submit(); expect(host.querySelector('input')!.value).toBe('Teste'); expect(host.querySelector('[role=alert]')!.textContent).toBe('Falha'); await render(<CreditCardsModal onClose={close} />); await submit(); await click('Fechar'); expect(close).toHaveBeenCalledTimes(1); expect(mocks.refresh).toHaveBeenCalled() })
+
+it('distinguishes absent forecast, forecast zero and actual zero without changing financial values', async () => {
+  const absent = { ...days[0], diario: 0, diarioPrevisto: undefined, diarioRealizado: null }
+  const forecast = { ...days[1], diario: 0, diarioPrevisto: 0, diarioRealizado: null }
+  const actual = { ...days[2], diario: 0, diarioPrevisto: 0, diarioRealizado: 0 }
+  await render(<><InlineDailyActual day={absent} /><InlineDailyActual day={forecast} /><InlineDailyActual day={actual} /></>)
+  const values = host.querySelectorAll('span.num')
+  expect(values[0].textContent).toBe('—')
+  expect(values[1].textContent).toContain('−R$')
+  expect(values[1].textContent).toContain('0,00')
+  expect(values[1].className).toContain('text-text-3')
+  expect(values[2].textContent).toBe(values[1].textContent)
+  expect(values[2].className).toContain('text-text font-semibold')
+  await click(`Editar Diário em ${forecast.date}`)
+  expect(host.querySelector('input')!.value).toBe('')
+  await click(`Editar Diário em ${actual.date}`)
+  expect(host.querySelector('input')!.value).toBe('0')
+})
+it('places exhausted status inside the existing month title and keeps excess in balances', async () => {
+  const result = runProjection({ settings: { saldo_abertura: 1000, data_ancora: '2026-11-01' }, recurringRules: [], transactions: [], dailyBudgets: [{ id: 'b', mes_referencia: null, descricao: '', categoria: '', valor_mensal: 300 }], dailyActuals: [{ data: '2026-11-02', valor: 400 }, { data: '2026-11-03', valor: 50 }], horizonMonths: 1 })
+  const month = result.months[0]
+  await render(<MonthColumn month={month} selectedDate={null} onDaySelect={vi.fn()} mode="diario" onModeChange={vi.fn()} />)
+  expect(host.querySelector('h2 [role=status]')?.getAttribute('aria-label')).toBe('Orçamento do Diário esgotado')
+  expect(host.querySelectorAll('[role=status]')).toHaveLength(1)
+  expect(host.textContent).not.toContain('Desde')
+  expect(month.days[2].saldo).toBe(month.days[1].saldo - 50)
+  expect(month.days[3].diarioPrevisto).toBe(0)
+})

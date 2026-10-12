@@ -43,8 +43,9 @@ export default function MonthColumn({
 
       {/* Month header */}
       <div className="px-4 py-3 border-b border-border bg-surface flex-none">
-        <h2 className="text-base font-bold text-text leading-tight">
+        <h2 className="relative pr-5 text-base font-bold text-text leading-tight">
           {monthLabel(month.year, month.month)}
+          {mode === 'diario' && exhausted && <span role="status" aria-label="Orçamento do Diário esgotado" title="Orçamento do Diário esgotado" className="absolute right-0 top-0 inline-flex h-4 w-4 items-center justify-center rounded-full bg-surface-2 text-text-3 text-[10px] font-normal">!</span>}
         </h2>
         <div className="flex gap-3 mt-0.5">
           <span className="text-xs text-text-2">
@@ -57,11 +58,6 @@ export default function MonthColumn({
           </span>
         </div>
       </div>
-
-      {mode === 'diario' && exhausted && <div role="status" className="px-3 py-2 text-xs text-orange bg-orange-soft border-b border-border flex-none">
-        <p className="font-semibold">Orçamento do Diário esgotado</p>
-        <p>Desde {exhausted.split('-').reverse().join('/')}, os dias sem lançamento têm previsão de R$ 0,00. Continue registrando gastos pelo lápis; eles serão descontados do saldo. Para ampliar o limite, revise o orçamento no menu Diário (a alteração global também vale para os próximos meses).</p>
-      </div>}
 
       {/* Column headers — same grid as day rows */}
       <div className="grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">

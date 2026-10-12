@@ -105,7 +105,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
     <div className="absolute inset-0 bg-black/50" onClick={() => { if (!busy) onClose() }} />
     <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="cards-title" tabIndex={-1} className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
       <div className="flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy} onClick={onClose}><X /></button></div>
-      <p className="text-sm text-text-2 mb-4">Cada fatura gera uma saída no vencimento. Não repita seu valor em Saídas nem no Diário. Lançamentos antigos permanecem separados; revise-os antes de cadastrar faturas dos mesmos meses.</p>
+      <p className="text-sm text-text-2 mb-4">Faturas entram nas Saídas. Evite duplicar valores no Diário ou em lançamentos antigos.</p>
       {error && <p role="alert" className="text-red mb-3">{error}</p>}
       {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={() => { router.refresh(); onClose() }}>Fechar</button></div></section> : <>
         <div className="flex gap-2 flex-wrap mb-4">
@@ -118,17 +118,17 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
             if (card) void run(() => updateCreditCard(card.id, nome, Number(dia)))
             else if (draft) void run(() => createCreditCard({ nome, dia_vencimento: Number(dia), invoices: draft.map(i => ({ mes_referencia: i.mes_referencia, valor: Number(i.valor) })) }), () => setCreated(true))
           }}>
-            <div className="grid grid-cols-[minmax(0,14rem)_5rem] gap-3 max-w-[20rem]">
-              <label className="text-sm">Nome do cartão<input required maxLength={100} className={field} value={nome} onChange={e => setNome(e.target.value)} /></label>
-              <label className="text-sm">Vencimento<input required type="number" min="1" max="31" step="1" className={field} value={dia} onChange={e => setDia(e.target.value)} /></label>
+            <div className="flex flex-wrap items-start gap-3 max-w-[22rem]">
+              <label className="text-sm min-w-0 w-48 max-w-full">Nome do cartão<input required maxLength={100} className={field} value={nome} onChange={e => setNome(e.target.value)} /></label>
+              <label className="text-sm w-24">Vencimento<input required type="number" min="1" max="31" step="1" className={field} value={dia} onChange={e => setDia(e.target.value)} /></label>
             </div>
-            <p className="text-xs text-text-3">Nos meses curtos, vence no último dia válido. Alterar o vencimento recalcula todas as faturas deste cartão, inclusive as passadas.</p>
+            <p className="text-xs text-text-3">Meses curtos: último dia válido. Mudar o vencimento atualiza também as faturas passadas.</p>
             {card ? <div className="flex gap-3"><button className={button}>Salvar cartão</button><button type="button" className="text-red text-sm" onClick={() => setConfirm({ kind: 'card', id: card.id })}>Excluir cartão</button></div> : <>
-              <div className="grid grid-cols-[minmax(0,14rem)_5rem] gap-3 max-w-[20rem]">
-                <label className="text-sm">Primeiro mês<input type="month" min="1000-01" max="9999-12" required className={field} value={first} onChange={e => { resize(e.target.value, count) }} /></label>
-                <label className="text-sm">Quantidade de faturas<input aria-label="Quantidade de faturas" type="number" min="1" max="60" step="1" required className={field} value={count} onChange={e => { resize(first, e.target.value) }} /></label>
+              <div className="flex flex-wrap items-start gap-3 max-w-[22rem]">
+                <label className="text-sm min-w-0 w-40 max-w-full">Primeiro mês<input type="month" min="1000-01" max="9999-12" required className={field} value={first} onChange={e => { resize(e.target.value, count) }} /></label>
+                <label className="text-sm whitespace-nowrap">Quantidade de faturas<input aria-label="Quantidade de faturas" type="number" min="1" max="60" step="1" required className={`${field} block !w-20`} value={count} onChange={e => { resize(first, e.target.value) }} /></label>
               </div>
-              {draft && <div className="grid grid-cols-1 gap-y-1.5 max-w-[20rem]"><p className="text-xs text-text-3 ">Valores das faturas (R$)</p>{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-2 text-xs"><span>{invoiceMonthLabel(i.mes_referencia)}</span><input aria-label={`Valor de ${invoiceMonthLabel(i.mes_referencia)}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={`${button}  mt-2`}>Cadastrar cartão e faturas</button></div>}
+              {draft && <div className="grid grid-cols-1 gap-y-1.5 w-fit max-w-full"><p className="text-xs text-text-3 ">Valores das faturas (R$)</p>{draft.map((i, index) => <label key={i.mes_referencia} className="grid grid-cols-[minmax(0,10rem)_minmax(0,7rem)] items-center gap-2 text-xs"><span>{invoiceMonthLabel(i.mes_referencia)}</span><input aria-label={`Valor de ${invoiceMonthLabel(i.mes_referencia)}`} required type="number" min="0" max="999999999" step="0.01" className={field} value={i.valor} onChange={e => setDraft(rows => rows?.map((row, k) => k === index ? { ...row, valor: e.target.value } : row) ?? null)} /></label>)}<button className={`${button}  mt-2`}>Cadastrar cartão e faturas</button></div>}
             </>}
           </form>
           {card && <section className="space-y-3 border-t border-border pt-4">
