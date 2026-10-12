@@ -4,6 +4,7 @@ import type { ProjectionInput } from '@/types'
 
 // Dados base para os testes
 const BASE_INPUT: ProjectionInput = {
+  transactions: [],
   settings: {
     saldo_abertura: 5000,
     data_ancora: '2026-01-01',
@@ -141,6 +142,7 @@ describe('runProjection', () => {
 
   it('detecta o primeiro saldo negativo', () => {
     const input: ProjectionInput = {
+      transactions: [],
       settings: { saldo_abertura: 100, data_ancora: '2026-01-01' },
       recurringRules: [],
       dailyBudgets: [{
@@ -159,6 +161,7 @@ describe('runProjection', () => {
 
   it('firstNegativeDate é null quando saldo nunca fica negativo', () => {
     const input: ProjectionInput = {
+      transactions: [],
       settings: { saldo_abertura: 999999, data_ancora: '2026-01-01' },
       recurringRules: [],
       dailyBudgets: [],
