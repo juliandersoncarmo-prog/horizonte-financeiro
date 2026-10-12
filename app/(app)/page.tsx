@@ -1,11 +1,5 @@
-import { getProjectionData } from '@/app/actions'
-import LedgerView from '@/components/LedgerView'
+import { ProjectionLedger } from '@/components/ProjectionProvider'
 
-export default async function HomePage() {
-  const now = new Date()
-  const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-  const endYear = now.getFullYear() + 5
-  const months = (endYear - now.getFullYear()) * 12 + (12 - now.getMonth())
-  const projection = await getProjectionData(startDate, months)
-  return <LedgerView projection={projection} />
+export default function HomePage() {
+  return <ProjectionLedger />
 }
