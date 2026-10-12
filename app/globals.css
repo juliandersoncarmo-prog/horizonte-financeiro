@@ -130,6 +130,10 @@ body {
   .ledger-months .grid { grid-template-columns: 52px minmax(0, 1fr) minmax(84px, auto); padding-left: 6px; padding-right: 6px; }
   .ledger-months .grid .num { font-size: 12px; }
   .ledger-months .grid select { max-width: 100%; font-size: 10px; }
+  .event-row { flex-wrap: wrap; gap: 4px; }
+  .event-row > p { width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .event-row > div { margin-left: auto; }
+  .event-action { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
   [role="dialog"] { overflow-x: hidden; }
   [role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea { min-width: 0; max-width: 100%; font-size: 16px; }
   [role="dialog"] .px-6, [role="dialog"] .p-6 { padding-left: 12px; padding-right: 12px; }

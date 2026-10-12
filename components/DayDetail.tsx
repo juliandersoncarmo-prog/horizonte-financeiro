@@ -115,18 +115,18 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     const valColor = isEntrada ? 'text-green'     : 'text-red'
     const prefix   = isEntrada ? ''                : '−'
     return (
-      <div key={e.id ?? e.ruleId ?? e.invoiceId} className={`flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
+      <div key={e.id ?? e.ruleId ?? e.invoiceId} className={`event-row flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
         <p className="text-sm font-medium text-text truncate min-w-0">{e.descricao}{e.incluido_diario ? " · incluída no Diário" : ""}</p>
         <div className="flex items-center gap-2 ml-3 flex-none">
           <span className={`text-sm font-semibold num ${valColor}`}>{prefix}{formatBRL(e.valor)}</span>
           <button
             onClick={() => openEdit(e)}
-            className="text-text-3 hover:text-accent transition-colors"
+            className="event-action text-text-3 hover:text-accent transition-colors"
             aria-label={`Editar ${e.descricao}`} title="Editar"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          <button disabled={saving || refreshing} aria-label={`Excluir ${e.descricao}`} title="Excluir" onClick={() => { setEditError(null); setDeletingEvent(e) }} className="text-text-3 hover:text-red"><Trash2 className="w-3.5 h-3.5" /></button>
+          <button disabled={saving || refreshing} aria-label={`Excluir ${e.descricao}`} title="Excluir" onClick={() => { setEditError(null); setDeletingEvent(e) }} className="event-action text-text-3 hover:text-red"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       </div>
     )
@@ -242,9 +242,9 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             )}
             <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
               <div>
-                <label className={labelClass}>Descrição</label>
+                <label htmlFor="edit-description" className={labelClass}>Descrição</label>
                 <input
-                  type="text"
+                  id="edit-description" type="text"
                   required
                   value={editing.descricao}
                   onChange={ev => setEditing(s => s && ({ ...s, descricao: ev.target.value }))}
@@ -252,9 +252,9 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                 />
               </div>
               <div>
-                <label className={labelClass}>Valor (R$)</label>
+                <label htmlFor="edit-value" className={labelClass}>Valor (R$)</label>
                 <input
-                  type="number"
+                  id="edit-value" type="number"
                   required
                   min="0.01"
                   step="0.01"
