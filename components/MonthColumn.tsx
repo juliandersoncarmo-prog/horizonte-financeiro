@@ -61,6 +61,7 @@ export default function MonthColumn({
         <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Data</span>
         <div className="flex justify-center">
           <select
+            aria-label={`Valores exibidos em ${monthLabel(month.year, month.month)}`}
             value={mode}
             onChange={e => onModeChange(e.target.value as Mode)}
             className="text-xs font-semibold text-text-3 bg-transparent border-none focus:outline-none cursor-pointer uppercase tracking-wide"
