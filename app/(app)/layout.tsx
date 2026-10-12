@@ -10,9 +10,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const projection = await getProjectionData(`${year}-${String(month).padStart(2, '0')}-01`, 60 + 13 - month)
   return (
     <ProjectionProvider projection={projection}>
-      <div className="flex h-full">
+      <div className="app-shell flex h-full">
         <Sidebar />
-        <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
+        <main className="min-w-0 flex-1 overflow-hidden flex flex-col">{children}</main>
       </div>
     </ProjectionProvider>
   )

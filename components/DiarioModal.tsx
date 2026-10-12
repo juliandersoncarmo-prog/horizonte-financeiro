@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useOptionalProjection } from './ProjectionProvider'
 import ModalPortal from './ModalPortal'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
 import { getAllDailyBudgets, addDailyBudget, deleteDailyBudget, updateDailyBudget } from '@/app/actions'
@@ -20,16 +21,20 @@ interface Props {
 
 export default function DiarioModal({ onClose }: Props) {
   const router = useRouter()
+  const snapshot = useOptionalProjection()?.editorData?.dailyBudgets
   const lock = useRef(false)
   const [notice, setNotice] = useState('')
 
-  const [items,        setItems]        = useState<BudgetItem[]>([])
-  const [loading,      setLoading]      = useState(true)
+  const [items,        setItems]        = useState<BudgetItem[]>(snapshot ?? [])
+  const [previousSnapshot, setPreviousSnapshot] = useState(snapshot)
+  if (snapshot !== previousSnapshot) { setPreviousSnapshot(snapshot); if (snapshot) setItems(snapshot) }
+  const [loading,      setLoading]      = useState(!snapshot)
   const [newDescricao, setNewDescricao] = useState('')
   const [newValor,     setNewValor]     = useState('')
   const [adding,       setAdding]       = useState(false)
   const [addError,     setAddError]     = useState<string | null>(null)
   const [editingId,    setEditingId]    = useState<string | null>(null)
+  const [editDescricao, setEditDescricao] = useState('')
   const [editValor,    setEditValor]    = useState('')
   const [saving,       setSaving]       = useState(false)
 
@@ -41,12 +46,13 @@ export default function DiarioModal({ onClose }: Props) {
   }
 
   useEffect(() => {
+    if (snapshot) return
     let active = true
     getAllDailyBudgets().then(data => {
       if (active) { setItems(data); setLoading(false) }
     }).catch(() => { if (active) { setAddError('Não foi possível carregar o Diário.'); setLoading(false) } })
     return () => { active = false }
-  }, [])
+  }, [snapshot])
 
   async function change(action: () => Promise<{ success: boolean; error?: string }>, after: () => void) {
     if (lock.current) return
@@ -71,9 +77,10 @@ export default function DiarioModal({ onClose }: Props) {
     await change(() => deleteDailyBudget(id), () => setItems(items => items.filter(item => item.id !== id)))
   }
   async function handleSaveEdit(id: string) {
-    if (!editValor) return
-    await change(() => updateDailyBudget(id, Number(editValor)), () => {
-      setItems(items => items.map(item => item.id === id ? { ...item, valor_mensal: Number(editValor) } : item)); setEditingId(null)
+    if (!editValor || !editDescricao.trim()) return
+    if (!window.confirm("Salvar nome e valor mensal? As previsões globais serão recalculadas; os registros realizados permanecem.")) return
+    await change(() => updateDailyBudget(id, Number(editValor), editDescricao), () => {
+      setItems(items => items.map(item => item.id === id ? { ...item, descricao: editDescricao.trim(), valor_mensal: Number(editValor) } : item)); setEditingId(null)
     })
   }
 
@@ -93,7 +100,7 @@ export default function DiarioModal({ onClose }: Props) {
         <div className="px-6 pt-6 pb-4 flex-none">
           <div className="flex items-start justify-between mb-1">
             <h2 className="text-base font-semibold text-text">Diário — Gastos Variáveis</h2>
-            <button aria-label="Fechar" onClick={onClose} className="text-text-3 hover:text-text transition-colors ml-4 flex-none">
+            <button aria-label="Fechar" disabled={saving || adding} onClick={onClose} className="text-text-3 hover:text-text transition-colors ml-4 flex-none">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -108,19 +115,20 @@ export default function DiarioModal({ onClose }: Props) {
           {notice && <p role="status" className="text-sm text-green">{notice}</p>}
           {saving && <p role="status" className="text-xs text-text-3">Salvando…</p>}
           {/* Itens */}
-          {loading ? (
+          {loading && !snapshot ? (
             <p className="text-sm text-text-3 text-center py-6">Carregando…</p>
           ) : items.length === 0 ? (
             <p className="text-sm text-text-3 text-center py-4">Nenhum gasto variável cadastrado.</p>
           ) : (
             <div className="flex flex-col gap-1.5 pb-2">
               {items.map(item => (
-                <div key={item.id} className="flex items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
-                  <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : ""}</span>
+                <div key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
+                  {editingId !== item.id && <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : ""}</span>}
 
                   {editingId === item.id ? (
                     <>
-                      <input
+                      <input aria-label="Nome do orçamento" value={editDescricao} onChange={e => setEditDescricao(e.target.value)} className={`${fieldClass} w-full`} />
+                      <input aria-label="Valor mensal"
                         type="number"
                         min="0"
                         step="0.01"
@@ -153,7 +161,7 @@ export default function DiarioModal({ onClose }: Props) {
                       </span>
                       <button
                         disabled={saving || adding}
-                        onClick={() => { setEditingId(item.id); setEditValor(String(item.valor_mensal)) }}
+                        onClick={() => { setEditingId(item.id); setEditValor(String(item.valor_mensal)); setEditDescricao(item.descricao) }}
                         className="text-text-3 hover:text-accent transition-colors flex-none"
                         title="Editar"
                       >

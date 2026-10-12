@@ -10,6 +10,12 @@ import { runProjection, projectionHorizon } from '@/lib/engine/projection'
 import { validMoney, validDueDay } from '@/lib/cards'
 import type { ProjectionResult, RecurringRule, Transaction, DailyBudget } from '@/types'
 
+function validCivilDate(value: string): boolean {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const time = Date.parse(value + 'T00:00:00Z')
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value
+}
+
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -69,7 +75,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
     }))
 
     const result = runProjection({ cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
-    return { ...result, cardData }
+    return { ...result, cardData, editorData: { recurringRules, dailyBudgets } }
   } catch (err) {
     unstable_rethrow(err)
     throw err
@@ -113,15 +119,15 @@ export async function addTransaction(formData: {
 
 export async function updateTransaction(
   id: string,
-  dados: { descricao: string; valor: number; incluido_diario?: boolean },
+  dados: { descricao: string; valor: number; incluido_diario?: boolean; data?: string },
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Movimentação inválida.' }
+    if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim() || (dados.data !== undefined && !validCivilDate(dados.data))) return { success: false, error: 'Movimentação inválida.' }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('transactions')
-      .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
+      .update({ ...(dados.data !== undefined ? { data: dados.data } : {}), descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
       .select('id')
@@ -135,15 +141,23 @@ export async function updateTransaction(
 
 export async function updateRecurringRule(
   id: string,
-  dados: { descricao: string; valor: number; incluido_diario?: boolean },
+  dados: { descricao: string; valor: number; incluido_diario?: boolean } & Partial<Pick<RecurringRule, "frequencia" | "dia_do_mes" | "data_inicio" | "modo_termino" | "valor_termino">>,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Recorrência inválida.' }
+    const fields = ['frequencia', 'dia_do_mes', 'data_inicio', 'modo_termino', 'valor_termino'] as const
+    const hasSchedule = fields.some(key => dados[key] !== undefined)
+    if (hasSchedule && (!['mensal', 'quinzenal', 'semanal', 'unico'].includes(dados.frequencia ?? '')
+      || !validDueDay(dados.dia_do_mes ?? 0) || !validCivilDate(dados.data_inicio ?? '')
+      || !['nunca', 'horizonte', 'ocorrencias', 'data'].includes(dados.modo_termino ?? '')
+      || (dados.modo_termino === 'ocorrencias' && (!/^\d+$/.test(dados.valor_termino ?? '') || Number(dados.valor_termino) < 1 || Number(dados.valor_termino) > 1200))
+      || (dados.modo_termino === 'data' && (!validCivilDate(dados.valor_termino ?? '') || dados.valor_termino! < dados.data_inicio!)))) return { success: false, error: 'Regras de recorrência inválidas.' }
+    const schedule = hasSchedule ? { frequencia: dados.frequencia, dia_do_mes: dados.dia_do_mes, data_inicio: dados.data_inicio, modo_termino: dados.modo_termino, valor_termino: ['nunca', 'horizonte'].includes(dados.modo_termino!) ? null : dados.valor_termino } : {}
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('recurring_rules')
-      .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
+      .update({ ...schedule, descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
       .select('id')
@@ -306,14 +320,14 @@ export async function deleteDailyBudget(id: string): Promise<{ success: boolean;
   }
 }
 
-export async function updateDailyBudget(id: string, valorMensal: number): Promise<{ success: boolean; error?: string }> {
+export async function updateDailyBudget(id: string, valorMensal: number, descricao?: string): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999) return { success: false, error: 'Orçamento inválido.' }
+    if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999 || (descricao !== undefined && (typeof descricao !== 'string' || !descricao.trim()))) return { success: false, error: 'Orçamento inválido.' }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('daily_budgets')
-      .update({ valor_mensal: valorMensal })
+      .update({ valor_mensal: valorMensal, ...(descricao !== undefined ? { descricao: descricao.trim() } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
       .select('id')

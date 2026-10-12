@@ -40,7 +40,7 @@ export default function KpiCard({
   iconColor,
 }: KpiCardProps) {
   return (
-    <div className="bg-surface rounded-2xl shadow-sm border border-border flex overflow-hidden">
+    <div className="kpi-card bg-surface rounded-2xl shadow-sm border border-border flex overflow-hidden">
       <div className={`w-1 flex-none ${BAR[color]}`} />
       <div className="flex-1 px-4 py-3 min-w-0 flex items-center justify-between gap-3">
         <div className="min-w-0">

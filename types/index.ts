@@ -69,6 +69,7 @@ export interface MonthResult {
 }
 
 export interface ProjectionResult {
+  editorData?: { recurringRules: RecurringRule[]; dailyBudgets: DailyBudget[] }
   cardData?: { enabled: boolean; cards: CreditCard[] }
   months: MonthResult[]
   firstNegativeDate: string | null

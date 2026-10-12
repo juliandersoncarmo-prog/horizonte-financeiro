@@ -37,3 +37,15 @@ it.each([[],null])('foreign/missing records never report success, returned %s',a
   expect((await updateRecurringRule(id,{descricao:'x',valor:0.01})).success).toBe(false)
 })
 it('database failure never reports success',async()=>{m.result.error={code:'42501'};expect((await deleteTransaction(id)).success).toBe(false)})
+
+it('changes transaction date with ownership filters and rejects impossible dates',async()=>{
+ expect((await updateTransaction(id,{descricao:'Nova',valor:30,data:'2026-11-02'})).success).toBe(true)
+ expect(m.calls).toContainEqual(['update',{descricao:'Nova',valor:30,data:'2026-11-02'}]);expect(m.calls).toContainEqual(['eq','user_id','owner'])
+ m.calls=[];m.db.mockClear();expect((await updateTransaction(id,{descricao:'x',valor:10,data:'2026-02-30'})).success).toBe(false);expect(m.db).not.toHaveBeenCalled()
+})
+it('persists complete recurring schedule and refuses incomplete or invalid termination',async()=>{
+ const rule={descricao:'Regra',valor:50,frequencia:'quinzenal' as const,dia_do_mes:10,data_inicio:'2026-09-01',modo_termino:'ocorrencias' as const,valor_termino:'8'}
+ expect((await updateRecurringRule(id,rule)).success).toBe(true);expect(m.calls).toContainEqual(['update',rule])
+ for(const invalid of [{...rule,valor_termino:'0'},{...rule,dia_do_mes:32},{...rule,data_inicio:'2026-02-30'},{...rule,modo_termino:'data' as const,valor_termino:'2026-08-01'}]) expect((await updateRecurringRule(id,invalid)).success).toBe(false)
+ expect((await updateRecurringRule(id,{descricao:'x',valor:10,frequencia:'mensal'})).success).toBe(false)
+})

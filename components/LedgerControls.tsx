@@ -46,7 +46,7 @@ export default function LedgerControls({ months, startIndex, visible, onStartCha
   const atLast  = startIndex + visible >= months.length
 
   return (
-    <div className="flex items-center gap-3 px-6 py-2.5 border-b border-border bg-surface flex-none">
+    <div className="ledger-controls flex items-center gap-3 px-6 py-2.5 border-b border-border bg-surface flex-none">
       <select
         aria-label="Ano da projeção"
         value={currentYear}

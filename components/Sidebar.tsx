@@ -3,11 +3,12 @@
 import { useState, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { TrendingUp, TrendingDown, List, CreditCard, Settings, LogOut, LayoutDashboard, CalendarDays } from 'lucide-react'
+import { TrendingUp, TrendingDown, List, CreditCard, Settings, LogOut, LayoutDashboard, CalendarDays, Menu, X } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
 import CreditCardsModal from './CreditCardsModal'
 import DiarioModal from './DiarioModal'
 import MonthlySummaryModal from './MonthlySummaryModal'
+import ModalPortal from './ModalPortal'
 import { signOut } from '@/app/actions'
 
 
@@ -25,6 +26,7 @@ function subscribeTheme(callback: () => void) {
 
 export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horizonte Financeiro', initials: 'HF' } }: { profile?: { name: string; email: string; initials: string } }) {
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
   const [showCards, setShowCards] = useState(false)
@@ -46,8 +48,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
     isActive ? 'bg-accent-soft text-accent' : 'text-text-2 hover:bg-surface-2 hover:text-text',
   ].join(' ')
 
-  return (
-    <aside className="w-60 flex-none flex flex-col border-r border-border bg-surface h-full">
+  const content = <>
+
       {/* Logo */}
       <div className="px-5 py-5 flex items-center gap-3">
         <div
@@ -142,6 +144,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
         </form>
       </div>
 
+    </>
+  return <>
       {modal && (
         <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
       )}
@@ -153,6 +157,17 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       {showDiario && (
         <DiarioModal onClose={() => setShowDiario(false)} />
       )}
-    </aside>
-  )
+
+    <header className="mobile-header">
+      <button type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu size={22} /></button>
+      <span className="font-semibold text-text">Horizonte</span>
+    </header>
+    <aside className="desktop-sidebar w-60 flex-none flex flex-col border-r border-border bg-surface h-full">{content}</aside>
+    {menuOpen && <ModalPortal label="Menu de navegação" onClose={() => setMenuOpen(false)}>
+      <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, nav a')) setMenuOpen(false) }}>
+        <button className="self-end p-3" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>
+        {content}
+      </aside>
+    </ModalPortal>}
+  </>
 }

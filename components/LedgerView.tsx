@@ -68,7 +68,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* KPI cards */}
-      <div className="grid grid-cols-3 gap-3 px-6 py-4 flex-none">
+      <div className="ledger-kpis grid grid-cols-3 gap-3 px-6 py-4 flex-none">
         <KpiCard
           label="Saldo Hoje"
           value={kpiSaldo === undefined ? '—' : formatBRL(kpiSaldo)}
@@ -107,7 +107,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
       />
 
       {/* Ledger columns — 4 colunas, layout card */}
-      <div className="flex flex-1 overflow-hidden gap-3 px-4 py-3">
+      <div className="ledger-months flex flex-1 min-h-0 overflow-hidden gap-3 px-4 py-3">
         {visibleMonths.map((month, i) => (
           <MonthColumn
             key={month.label}

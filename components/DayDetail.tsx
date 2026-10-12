@@ -2,8 +2,10 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, X } from 'lucide-react'
-import type { DayResult, DayEvent } from '@/types'
+import { Pencil, Trash2, X } from 'lucide-react'
+import { useOptionalProjection } from './ProjectionProvider'
+import { deleteCardInvoice } from '@/app/card-actions'
+import type { RecurringRule, DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
 import { updateTransaction, updateRecurringRule, deleteTransaction, deleteRecurringRule } from '@/app/actions'
 import ModalPortal from './ModalPortal'
@@ -40,10 +42,15 @@ interface EditState {
   descricao: string
   valor: string
   incluido_diario: boolean
+  data: string
+  tipo: 'entrada' | 'saida'
+  rule?: RecurringRule
 }
 
 export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const router = useRouter()
+  const projection = useOptionalProjection()
+  const [deletingEvent, setDeletingEvent] = useState<DayEvent | null>(null)
   const lock = useRef(false)
   const [refreshing, startRefresh] = useTransition()
   const [notice, setNotice] = useState('')
@@ -65,7 +72,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     const id   = e.id ?? e.ruleId
     const kind = e.id ? 'transaction' : 'rule'
     if (!id) return
-    setEditing({ id, kind, descricao: e.descricao, valor: String(e.valor), incluido_diario: e.incluido_diario ?? false })
+    setEditing({ id, kind, descricao: e.descricao, valor: String(e.valor), incluido_diario: e.incluido_diario ?? false, data: day.date, tipo: e.tipo, rule: projection?.editorData?.recurringRules.find(r => r.id === id) })
     setEditError(null)
     setConfirmDelete(false)
   }
@@ -74,7 +81,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     if (!editing || lock.current) return
     lock.current = true; setSaving(true); setEditError(null)
     try {
-      const dados = { descricao: editing.descricao, valor: Number(editing.valor), incluido_diario: editing.incluido_diario }
+      const dados = { ...(editing.kind === "transaction" ? { data: editing.data } : editing.rule ?? {}), descricao: editing.descricao, valor: Number(editing.valor), incluido_diario: editing.tipo === 'saida' && editing.incluido_diario }
       const result = remove
         ? editing.kind === 'transaction' ? await deleteTransaction(editing.id) : await deleteRecurringRule(editing.id, 'all-occurrences')
         : editing.kind === 'transaction' ? await updateTransaction(editing.id, dados) : await updateRecurringRule(editing.id, dados)
@@ -85,7 +92,20 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     } catch { setEditError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
     finally { lock.current = false; setSaving(false) }
   }
-  async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); await mutateEdit(false) }
+  async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); if (editing?.kind === 'rule' && !window.confirm('Salvar a regra inteira? Todas as ocorrências, inclusive passadas, serão recalculadas.')) return; await mutateEdit(false) }
+
+  async function removeEvent() {
+    const event = deletingEvent
+    if (!event || lock.current) return
+    lock.current = true; setSaving(true); setEditError(null)
+    try {
+      const result = event.invoiceId && event.cardId ? await deleteCardInvoice(event.cardId, event.invoiceId)
+        : event.id ? await deleteTransaction(event.id) : event.ruleId ? await deleteRecurringRule(event.ruleId, 'all-occurrences') : { success: false, error: 'Registro indisponível.' }
+      if (!result.success) { setEditError(result.error ?? 'Não foi possível excluir.'); return }
+      setDeletingEvent(null); setNotice('Registro excluído com sucesso.'); startRefresh(() => router.refresh())
+    } catch { setEditError('Falha de comunicação. Tente novamente.') }
+    finally { lock.current = false; setSaving(false) }
+  }
 
   const fieldClass = 'w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
   const labelClass = 'text-xs font-semibold uppercase tracking-widest text-text-3 block mb-1'
@@ -102,10 +122,11 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
           <button
             onClick={() => openEdit(e)}
             className="text-text-3 hover:text-accent transition-colors"
-            title="Editar"
+            aria-label={`Editar ${e.descricao}`} title="Editar"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
+          <button disabled={saving || refreshing} aria-label={`Excluir ${e.descricao}`} title="Excluir" onClick={() => { setEditError(null); setDeletingEvent(e) }} className="text-text-3 hover:text-red"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       </div>
     )
@@ -130,7 +151,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
             <p className="text-[11px] text-text-3 mt-0.5">saldo projetado</p>
           </div>
           <button
-            aria-label="Fechar detalhes" onClick={onClose}
+            aria-label="Fechar detalhes" disabled={saving} onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-text-3 hover:bg-surface-2 hover:text-text transition-colors flex-none mt-0.5"
           >
             ✕
@@ -184,6 +205,15 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     </ModalPortal>
       {cardId && <CreditCardsModal initialCardId={cardId} onClose={() => setCardId(null)} />}
 
+      {deletingEvent && <ModalPortal label="Confirmar exclusão" onClose={() => { if (!lock.current) setDeletingEvent(null) }}>
+        <div className="bg-surface p-6 rounded-2xl space-y-4">
+          <h2 className="font-semibold">Excluir {deletingEvent.descricao}?</h2>
+          <p className="text-sm">{deletingEvent.invoiceId ? 'Somente esta fatura será excluída. O cartão e as outras faturas permanecem.' : deletingEvent.ruleId ? 'A regra inteira será excluída, afetando todas as ocorrências, inclusive passadas. Saldos e Resumo Mensal serão recalculados.' : 'Somente este lançamento será excluído. Saldos e Resumo Mensal serão recalculados.'}</p>
+          {editError && <p role="alert">{editError}</p>}
+          <button disabled={saving} onClick={() => void removeEvent()} className="bg-red text-white rounded-xl p-3">{saving ? 'Excluindo…' : 'Confirmar exclusão'}</button>
+          <button disabled={saving} onClick={() => setDeletingEvent(null)} className="ml-3 p-3">Cancelar</button>
+        </div>
+      </ModalPortal>}
       {/* Modal de adição */}
       {addTipo && (
         <AddTransactionModal
@@ -233,7 +263,15 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                   className={fieldClass}
                 />
               </div>
-              <label className="text-sm text-text"><input type="checkbox" checked={editing.incluido_diario} onChange={e => setEditing(s => s && ({ ...s, incluido_diario: e.target.checked }))} /> Incluída no total do Diário (somente saídas)</label>
+              {editing.kind === 'transaction' && <label className={labelClass}>Data<input type="date" required value={editing.data} onChange={e => setEditing(state => state && ({ ...state, data: e.target.value }))} className={fieldClass} /></label>}
+              {editing.kind === 'rule' && editing.rule && <>
+                <label className={labelClass}>Frequência<select className={fieldClass} value={editing.rule.frequencia} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, frequencia: e.target.value as RecurringRule['frequencia'] } }) : state)}>{[['mensal','Mensal'],['quinzenal','Duas vezes por mês'],['semanal','Semanal'],['unico','Uma vez']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label className={labelClass}>Dia do mês<input type="number" min="1" max="31" required className={fieldClass} value={editing.rule.dia_do_mes} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, dia_do_mes: Number(e.target.value) } }) : state)} /></label>
+                <label className={labelClass}>Data inicial<input type="date" required className={fieldClass} value={editing.rule.data_inicio} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, data_inicio: e.target.value } }) : state)} /></label>
+                <label className={labelClass}>Término<select className={fieldClass} value={editing.rule.modo_termino} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, modo_termino: e.target.value as RecurringRule['modo_termino'], valor_termino: null } }) : state)}>{[['nunca','Sem término'],['horizonte','Horizonte'],['ocorrencias','Quantidade de ocorrências'],['data','Data final']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                {['data', 'ocorrencias'].includes(editing.rule.modo_termino) && <label className={labelClass}>{editing.rule.modo_termino === 'data' ? 'Data final' : 'Quantidade'}<input required type={editing.rule.modo_termino === 'data' ? 'date' : 'number'} min={editing.rule.modo_termino === 'data' ? editing.rule.data_inicio : '1'} max={editing.rule.modo_termino === 'ocorrencias' ? '1200' : undefined} className={fieldClass} value={editing.rule.valor_termino ?? ''} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, valor_termino: e.target.value } }) : state)} /></label>}
+              </>}
+              {editing.tipo === 'saida' && <label className="text-sm text-text"><input type="checkbox" checked={editing.incluido_diario} onChange={e => setEditing(s => s && ({ ...s, incluido_diario: e.target.checked }))} /> Incluída no total do Diário</label>}
               {editError && <p role="alert" className="text-xs text-red">{editError}</p>}
               <div className="flex gap-3 pt-1">
                 <button
