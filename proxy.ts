@@ -1,9 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { assertTestProject } from '@/lib/supabase/test-project'
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/callback']
 
 export async function proxy(request: NextRequest) {
+  assertTestProject()
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -25,21 +27,26 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  function redirectWithCookies(url: URL) {
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+    return response
+  }
 
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
-  if (!user && !isPublic) {
+  if ((error || !user) && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
-  if (user && pathname === '/login') {
+  if (!error && user && pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/'
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
   return supabaseResponse

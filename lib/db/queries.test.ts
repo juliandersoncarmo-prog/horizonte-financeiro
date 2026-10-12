@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const mock = vi.hoisted(() => ({ service: vi.fn(), eq: vi.fn(), select: vi.fn(), from: vi.fn() }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceClient: mock.service }))
+vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: mock.service }))
 import { getDailyActuals } from './queries'
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubEnv('DIARIO_INTELIGENTE_ENABLED', 'true')

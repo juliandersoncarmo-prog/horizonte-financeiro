@@ -1,14 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from './server'
 
-// Service role client — bypassa RLS. Usar apenas em Server Actions/Route Handlers
-// onde o user_id já é filtrado explicitamente nas queries.
-export function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {
-    throw new Error(
-      `Variáveis de ambiente Supabase ausentes: ${!url ? 'NEXT_PUBLIC_SUPABASE_URL ' : ''}${!key ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`.trim()
-    )
-  }
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+// All financial operations use the request session. RLS remains active.
+// No service role credential is read or required by the application.
+export async function createUserDataClient() {
+  return createClient()
 }

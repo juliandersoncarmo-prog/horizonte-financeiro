@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const m = vi.hoisted(() => ({ single: vi.fn(), eq: vi.fn(), service: vi.fn() }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceClient: m.service }))
+vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: m.service }))
 import { getUserSettings } from './queries'
 beforeEach(() => {
   vi.clearAllMocks()

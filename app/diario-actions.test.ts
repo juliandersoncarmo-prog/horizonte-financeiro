@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mock = vi.hoisted(() => ({ auth: vi.fn(), db: vi.fn(), revalidate: vi.fn(), eq: vi.fn(), upsert: vi.fn(), del: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: mock.auth } }) }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceClient: mock.db }))
+vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: mock.db }))
 vi.mock('next/cache', () => ({ revalidatePath: mock.revalidate }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn(), unstable_rethrow: vi.fn() }))
 import { saveDailyActual } from './actions'

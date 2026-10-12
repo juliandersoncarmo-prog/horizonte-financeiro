@@ -3,7 +3,7 @@ const m = vi.hoisted(() => ({ settings: vi.fn(), auth: vi.fn(), insert: vi.fn(),
 vi.mock('@/lib/db/queries', () => ({ getUserSettings: m.settings, getRecurringRules: vi.fn(), getTransactions: vi.fn(), getDailyBudgets: vi.fn(), getDailyActuals: vi.fn() }))
 vi.mock('./card-actions', () => ({ getCreditCards: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: m.auth } }) }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceClient: m.service }))
+vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: m.service }))
 vi.mock('next/cache', () => ({ revalidatePath: m.refresh }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn(), unstable_rethrow: vi.fn() }))
 import { hasInitialSettings, initializeSettings } from './actions'

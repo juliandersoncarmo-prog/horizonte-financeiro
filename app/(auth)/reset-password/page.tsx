@@ -25,6 +25,7 @@ export default function ResetPasswordPage() {
     if (error) {
       setError(error.message)
     } else {
+      await supabase.auth.signOut({ scope: 'local' })
       setSuccess(true)
       setTimeout(() => router.push('/login'), 2000)
     }

@@ -1,8 +1,8 @@
-import { createServiceClient } from '@/lib/supabase/service'
+import { createUserDataClient } from '@/lib/supabase/service'
 
 export async function getUserSettings(userId: string): Promise<{ saldo_abertura: number; data_ancora: string } | null> {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('settings')
       .select('saldo_abertura, data_ancora')
@@ -25,7 +25,7 @@ export async function getUserSettings(userId: string): Promise<{ saldo_abertura:
 
 export async function getRecurringRules(userId: string) {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('recurring_rules')
       .select('*')
@@ -44,7 +44,7 @@ export async function getRecurringRules(userId: string) {
 
 export async function getTransactions(userId: string) {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -63,7 +63,7 @@ export async function getTransactions(userId: string) {
 
 export async function getDailyBudgets(userId: string) {
   try {
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('daily_budgets')
       .select('*')
@@ -81,7 +81,7 @@ export async function getDailyBudgets(userId: string) {
 
 export async function getDailyActuals(userId: string) {
   if (process.env.DIARIO_INTELIGENTE_ENABLED !== 'true') return []
-  const { data, error } = await createServiceClient().from('daily_actuals').select('data,valor').eq('user_id', userId)
+  const { data, error } = await (await createUserDataClient()).from('daily_actuals').select('data,valor').eq('user_id', userId)
   if (error) throw new Error('Não foi possível carregar o Diário. Verifique a migração no ambiente de testes.')
   return (data ?? []).map(a => ({ data: String(a.data), valor: Number(a.valor) }))
 }

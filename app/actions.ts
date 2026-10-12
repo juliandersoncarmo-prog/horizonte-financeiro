@@ -5,14 +5,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createUserDataClient } from '@/lib/supabase/service'
 import { runProjection, projectionHorizon } from '@/lib/engine/projection'
+import { validMoney, validDueDay } from '@/lib/cards'
 import type { ProjectionResult, RecurringRule, Transaction, DailyBudget } from '@/types'
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Não autenticado')
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) throw new Error('Não autenticado')
   return user.id
 }
 
@@ -83,9 +84,16 @@ export async function addTransaction(formData: {
   data: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!validMoney(formData.valor) || !['entrada', 'saida'].includes(formData.tipo)
+      || typeof formData.descricao !== 'string' || !formData.descricao.trim()
+      || !/^\d{4}-\d{2}-\d{2}$/.test(formData.data)
+      || !Number.isFinite(Date.parse(formData.data + 'T00:00:00Z'))
+      || new Date(formData.data + 'T00:00:00Z').toISOString().slice(0, 10) !== formData.data) {
+      return { success: false, error: 'Movimentação inválida.' }
+    }
     if (formData.incluido_diario && !diarioEnabled()) return { success: false, error: 'Conciliação aguarda habilitação no ambiente de testes.' }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase.from('transactions').insert({
       user_id:   userId,
       tipo:      formData.tipo,
@@ -109,8 +117,9 @@ export async function updateTransaction(
   dados: { descricao: string; valor: number; incluido_diario?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Movimentação inválida.' }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase
       .from('transactions')
       .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
@@ -130,8 +139,9 @@ export async function updateRecurringRule(
   dados: { descricao: string; valor: number; incluido_diario?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!validMoney(dados.valor) || typeof dados.descricao !== 'string' || !dados.descricao.trim()) return { success: false, error: 'Recorrência inválida.' }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase
       .from('recurring_rules')
       .update({ descricao: dados.descricao, valor: dados.valor, ...(diarioEnabled() && dados.incluido_diario !== undefined ? { incluido_diario: dados.incluido_diario } : {}) })
@@ -156,8 +166,16 @@ export async function addRecurringRule(formData: {
   valor_termino: string | null
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!validMoney(formData.valor) || !validDueDay(formData.dia_do_mes)
+      || !['entrada', 'saida'].includes(formData.tipo)
+      || typeof formData.descricao !== 'string' || !formData.descricao.trim()
+      || !['nunca', 'ocorrencias'].includes(formData.modo_termino)
+      || (formData.modo_termino === 'ocorrencias' && (!/^\d+$/.test(formData.valor_termino ?? '')
+        || Number(formData.valor_termino) < 1 || Number(formData.valor_termino) > 1200))) {
+      return { success: false, error: 'Recorrência inválida.' }
+    }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     if (formData.incluido_diario && !diarioEnabled()) return { success: false, error: 'Conciliação aguarda habilitação no ambiente de testes.' }
     const today = new Date().toISOString().split('T')[0]
     const { error } = await supabase.from('recurring_rules').insert({
@@ -193,7 +211,7 @@ export async function saveSettings(dados: {
       return { success: false, error: 'Informe um saldo válido e uma data existente.' }
     }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase
       .from('settings')
       .upsert(
@@ -216,7 +234,7 @@ export async function initializeSettings(dados: { saldo_abertura: number; data_a
       || new Date(dados.data_ancora + 'T00:00:00Z').toISOString().slice(0, 10) !== dados.data_ancora) return { success: false, error: 'Informe um saldo válido e uma data existente.' }
     const userId = await getAuthenticatedUserId()
     if (await getUserSettings(userId)) return { success: false, error: 'Já existe configuração inicial. Altere-a em Configurações.' }
-    const { error } = await createServiceClient().from('settings').insert({ user_id: userId, ...dados })
+    const { error } = await (await createUserDataClient()).from('settings').insert({ user_id: userId, ...dados })
     if (error) return { success: false, error: 'Não foi possível criar a configuração. Recarregue antes de tentar novamente.' }
     // The wizard refreshes when the user finishes the optional stage.
     return { success: true }
@@ -230,7 +248,7 @@ export async function hasInitialSettings(): Promise<boolean> {
 export async function resetAllData(): Promise<{ success: boolean; error?: string }> {
   try {
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const results = await Promise.all([
       ...(process.env.CARTOES_ENABLED === 'true' ? [supabase.from('credit_cards').delete().eq('user_id', userId)] : []),
       supabase.from('transactions').delete().eq('user_id', userId),
@@ -253,7 +271,7 @@ export async function getAllDailyBudgets(): Promise<{
 }[]> {
   try {
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { data, error } = await supabase
       .from('daily_budgets')
       .select('id, descricao, categoria, valor_mensal, mes_referencia')
@@ -275,7 +293,7 @@ export async function getAllDailyBudgets(): Promise<{
 export async function deleteDailyBudget(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase
       .from('daily_budgets')
       .delete()
@@ -294,7 +312,7 @@ export async function updateDailyBudget(id: string, valorMensal: number): Promis
   try {
     if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999) return { success: false, error: 'Orçamento inválido.' }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase
       .from('daily_budgets')
       .update({ valor_mensal: valorMensal })
@@ -316,7 +334,7 @@ export async function addDailyBudget(formData: {
   try {
     if (!Number.isFinite(formData.valor_mensal) || formData.valor_mensal < 0 || formData.valor_mensal > 999999999) return { success: false, error: "Orçamento inválido." }
     const userId = await getAuthenticatedUserId()
-    const supabase = createServiceClient()
+    const supabase = await createUserDataClient()
     const { error } = await supabase.from('daily_budgets').insert({
       user_id:      userId,
       descricao:    formData.descricao,
@@ -349,7 +367,7 @@ export async function saveDailyActual(data: string, valor: number | null): Promi
       return { success: false, error: 'Informe uma data existente e um valor não negativo com até dois decimais.' }
     }
     const userId = await getAuthenticatedUserId()
-    const db = createServiceClient()
+    const db = await createUserDataClient()
     const result = valor === null
       ? await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
       : await db.from('daily_actuals').upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })

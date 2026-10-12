@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ settings: vi.fn(), rules: vi.fn(), transaction
 vi.mock('@/lib/db/queries', () => ({ getUserSettings: mocks.settings, getRecurringRules: mocks.rules, getTransactions: mocks.transactions, getDailyBudgets: mocks.budgets, getDailyActuals: mocks.actuals }))
 vi.mock('./card-actions', () => ({ getCreditCards: mocks.cards }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: mocks.auth } }) }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceClient: vi.fn() }))
+vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: vi.fn() }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn(), unstable_rethrow: vi.fn() }))
 import { getProjectionData } from './actions'

@@ -1,0 +1,14 @@
+REVOKE ALL ON public.settings FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.settings TO authenticated;
+REVOKE ALL ON public.transactions FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.transactions TO authenticated;
+REVOKE ALL ON public.recurring_rules FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.recurring_rules TO authenticated;
+REVOKE ALL ON public.daily_budgets FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.daily_budgets TO authenticated;
+REVOKE ALL ON public.daily_actuals FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.daily_actuals TO authenticated;
+REVOKE ALL ON public.credit_cards FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.credit_cards TO authenticated;
+REVOKE ALL ON public.card_invoices FROM anon, authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.card_invoices TO authenticated;
