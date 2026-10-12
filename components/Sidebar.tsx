@@ -23,7 +23,7 @@ function subscribeTheme(callback: () => void) {
   }
 }
 
-export default function Sidebar() {
+export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horizonte Financeiro', initials: 'HF' } }: { profile?: { name: string; email: string; initials: string } }) {
   const pathname = usePathname()
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
@@ -116,11 +116,11 @@ export default function Sidebar() {
       <div className="px-3 py-4 border-t border-border">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="w-7 h-7 rounded-full bg-accent-soft text-accent flex items-center justify-center text-[11px] font-bold flex-none select-none">
-            JA
+            {profile.initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-text truncate">Julia Anderson</p>
-            <p className="text-[11px] text-text-3 truncate">juliandersoncarmo@gmail.com</p>
+            <p className="text-xs font-medium text-text truncate">{profile.name}</p>
+            <p className="text-[11px] text-text-3 truncate">{profile.email}</p>
           </div>
           <button
             onClick={toggleTheme}
