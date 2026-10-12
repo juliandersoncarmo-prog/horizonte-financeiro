@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ModalPortal from './ModalPortal'
 import { X } from 'lucide-react'
 import { addTransaction, addRecurringRule } from '@/app/actions'
 
@@ -67,16 +68,15 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   const labelClass = 'text-xs font-semibold uppercase tracking-widest text-text-3 block mb-1'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-w-md mx-4 p-6">
+    <ModalPortal onClose={onClose} label={isEntrada ? 'Nova entrada' : 'Nova saída'}>
+      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2 className={`text-base font-semibold ${titleColor}`}>
             {isEntrada ? '+ Nova entrada' : '+ Nova saída'}
           </h2>
-          <button onClick={onClose} className="text-text-3 hover:text-text transition-colors">
+          <button aria-label="Fechar" onClick={onClose} className="text-text-3 hover:text-text transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -246,6 +246,6 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
           </form>
         )}
       </div>
-    </div>
+    </ModalPortal>
   )
 }

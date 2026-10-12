@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ModalPortal from './ModalPortal'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
 import { getAllDailyBudgets, addDailyBudget, deleteDailyBudget, updateDailyBudget } from '@/app/actions'
 
@@ -92,16 +93,14 @@ export default function DiarioModal({ onClose }: Props) {
   const fieldClass = 'border border-border rounded-xl px-3 py-2 text-sm bg-surface-2 text-text focus:outline-none focus:border-accent'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-w-md mx-4 flex flex-col max-h-[85vh]">
+    <ModalPortal onClose={onClose} label="Diário — Gastos Variáveis">
+      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full flex flex-col max-h-[calc(100dvh-2rem)]">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex-none">
           <div className="flex items-start justify-between mb-1">
             <h2 className="text-base font-semibold text-text">Diário — Gastos Variáveis</h2>
-            <button onClick={onClose} className="text-text-3 hover:text-text transition-colors ml-4 flex-none">
+            <button aria-label="Fechar" onClick={onClose} className="text-text-3 hover:text-text transition-colors ml-4 flex-none">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -230,6 +229,6 @@ export default function DiarioModal({ onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   )
 }
