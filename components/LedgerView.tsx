@@ -24,7 +24,7 @@ interface LedgerViewProps {
 
 export default function LedgerView({ projection }: LedgerViewProps) {
   const { months } = projection
-  const todayLabel = useMemo(todayFormatted, [])
+  const todayLabel = useMemo(() => todayFormatted(), [])
 
   const todayMonthIdx = useMemo(
     () => Math.max(0, months.findIndex(m => m.days.some(d => d.isToday))),

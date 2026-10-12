@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { runProjection } from '@/lib/engine/projection'
+import { runProjection, projectionHorizon } from '@/lib/engine/projection'
 import type { ProjectionResult, RecurringRule, Transaction, DailyBudget } from '@/types'
 
 async function getAuthenticatedUserId(): Promise<string> {
@@ -26,10 +26,6 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       getDailyBudgets(userId),
     ])
 
-    console.log('settings:', JSON.stringify(settings))
-    console.log('rules:', rawRules?.length, JSON.stringify(rawRules))
-    console.log('transactions:', transactions?.length)
-    console.log('budgets:', rawBudgets?.length)
 
     const effectiveSettings = settings ?? {
       saldo_abertura: 0,
@@ -66,11 +62,10 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    console.log('runProjection input:', JSON.stringify({ saldoAbertura: effectiveSettings.saldo_abertura, dataAncora: effectiveSettings.data_ancora, startDate, months }))
-    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, horizonMonths: months })
-    console.log('runProjection output months:', result?.months?.length)
+    const result = runProjection({ settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
     return result
   } catch (err) {
+    unstable_rethrow(err)
     console.error('getProjectionData error:', err)
     return {
       months: [],
@@ -187,6 +182,10 @@ export async function saveSettings(dados: {
   data_ancora: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!Number.isFinite(dados.saldo_abertura) || !/^\d{4}-\d{2}-\d{2}$/.test(dados.data_ancora)
+      || new Date(dados.data_ancora + 'T00:00:00Z').toISOString().slice(0, 10) !== dados.data_ancora) {
+      return { success: false, error: 'Informe um saldo válido e uma data existente.' }
+    }
     const userId = await getAuthenticatedUserId()
     const supabase = createServiceClient()
     const { error } = await supabase

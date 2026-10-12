@@ -36,7 +36,13 @@ export default function DiarioModal({ onClose }: Props) {
     setLoading(false)
   }
 
-  useEffect(() => { loadItems() }, [])
+  useEffect(() => {
+    let active = true
+    getAllDailyBudgets().then(data => {
+      if (active) { setItems(data); setLoading(false) }
+    })
+    return () => { active = false }
+  }, [])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()

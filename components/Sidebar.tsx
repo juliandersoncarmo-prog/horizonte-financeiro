@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { TrendingUp, TrendingDown, List, Settings, LogOut, LayoutDashboard } from 'lucide-react'
@@ -9,25 +9,32 @@ import DiarioModal from './DiarioModal'
 import { signOut } from '@/app/actions'
 
 
+function readTheme(): 'light' | 'dark' {
+  return localStorage.getItem('hf-theme') === 'dark' ? 'dark' : 'light'
+}
+function subscribeTheme(callback: () => void) {
+  window.addEventListener('storage', callback)
+  window.addEventListener('hf-theme-change', callback)
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener('hf-theme-change', callback)
+  }
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
-  const [theme,       setTheme]       = useState<'light' | 'dark'>('light')
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light' as const)
 
   useEffect(() => {
-    const saved = localStorage.getItem('hf-theme') as 'light' | 'dark' | null
-    if (saved) {
-      setTheme(saved)
-      document.documentElement.setAttribute('data-theme', saved)
-    }
-  }, [])
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   function toggleTheme() {
     const next = theme === 'light' ? 'dark' : 'light'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
     localStorage.setItem('hf-theme', next)
+    window.dispatchEvent(new Event('hf-theme-change'))
   }
 
   const navBtn = (isActive: boolean) => [

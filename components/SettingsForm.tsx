@@ -12,6 +12,7 @@ interface Props {
 export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
   const router  = useRouter()
   const [valor,   setValor]   = useState(saldoAtual != null ? String(saldoAtual) : '')
+  const [data, setData] = useState(dataAncora)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
@@ -22,7 +23,7 @@ export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
     setError(null)
     const result = await saveSettings({
       saldo_abertura: Number(valor),
-      data_ancora:    dataAncora,
+      data_ancora:    data,
     })
     setLoading(false)
     if (result.success) {
@@ -37,12 +38,12 @@ export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <p className="text-sm text-text-2">Informe o saldo antes das movimentações da data escolhida. As entradas, saídas e o diário desse dia serão aplicados a partir dele.</p>
       <div>
         <label className={labelClass}>Valor (R$)</label>
         <input
           type="number"
           required
-          min="0"
           step="0.01"
           placeholder="0,00"
           value={valor}
@@ -54,9 +55,10 @@ export default function SettingsForm({ saldoAtual, dataAncora }: Props) {
         <label className={labelClass}>Data</label>
         <input
           type="date"
-          value={dataAncora}
-          readOnly
-          className={`${fieldClass} opacity-60 cursor-not-allowed`}
+          value={data}
+          onChange={e => setData(e.target.value)}
+          required
+          className={fieldClass}
         />
       </div>
       {error && <p className="text-xs text-red">{error}</p>}

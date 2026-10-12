@@ -12,7 +12,7 @@ const MONTH_NAMES = [
 ]
 
 function daysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate()
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
 }
 
 function toISO(year: number, month: number, day: number): string {
@@ -42,58 +42,55 @@ export function monthLabel(year: number, month: number): string {
   return `${MONTH_NAMES[month]} de ${year}`
 }
 
+// Civil dates use UTC solely for calendar arithmetic, never elapsed local hours.
+function civilDay(iso: string): number {
+  return Date.parse(iso + 'T00:00:00Z') / 86400000
+}
+
+function firingDays(rule: ProjectionInput['recurringRules'][number], year: number, month: number): number[] {
+  const n = daysInMonth(year, month)
+  if (rule.frequencia === 'mensal') return [Math.min(rule.dia_do_mes, n)]
+  // Preserve the existing twice-per-month rule; it is not a rolling 15-day interval.
+  if (rule.frequencia === 'quinzenal') return [rule.dia_do_mes, rule.dia_do_mes + 15].filter(d => d <= n)
+  return []
+}
+
 function isRuleActiveOnDate(
-  rule: { frequencia: string; dia_do_mes: number; data_inicio: string; modo_termino: string; valor_termino: string | null },
-  dateISO: string,
-  year: number,
-  month: number,
-  day: number,
+  rule: ProjectionInput['recurringRules'][number], dateISO: string,
+  year: number, month: number, day: number,
 ): boolean {
   if (dateISO < rule.data_inicio) return false
-
-  if (rule.modo_termino === 'data' && rule.valor_termino) {
-    if (dateISO > rule.valor_termino) return false
+  if (rule.modo_termino === 'data' && rule.valor_termino && dateISO > rule.valor_termino) return false
+  let occurrence = 0
+  if (rule.frequencia === 'unico') {
+    if (dateISO !== rule.data_inicio) return false
+    occurrence = 1
+  } else if (rule.frequencia === 'semanal') {
+    const distance = civilDay(dateISO) - civilDay(rule.data_inicio)
+    if (distance % 7 !== 0) return false
+    occurrence = distance / 7 + 1
+  } else {
+    if (!firingDays(rule, year, month).includes(day)) return false
+    const [iy, im] = rule.data_inicio.split('-').map(Number)
+    for (let index = iy * 12 + im - 1; index <= year * 12 + month; index++) {
+      const y = Math.floor(index / 12), m = index % 12
+      for (const d of firingDays(rule, y, m)) {
+        const candidate = toISO(y, m, d)
+        if (candidate >= rule.data_inicio && candidate <= dateISO) occurrence++
+      }
+    }
   }
-
   if (rule.modo_termino === 'ocorrencias' && rule.valor_termino) {
-    const maxOcorrencias = parseInt(rule.valor_termino, 10)
-    const parts = rule.data_inicio.split('-').map(Number)
-    const inicioYear  = parts[0]
-    const inicioMonth = parts[1] - 1  // 0-indexed
-    const inicioDay   = parts[2]
-
-    // First firing month: same month if dia_do_mes >= data_inicio day, else next month
-    let firstYear  = inicioYear
-    let firstMonth = inicioMonth
-    if (rule.dia_do_mes < inicioDay) {
-      firstMonth++
-      if (firstMonth >= 12) { firstMonth = 0; firstYear++ }
-    }
-
-    // Occurrence number for this (year, month) — both 0-indexed month
-    const occurrenceNumber = (year - firstYear) * 12 + (month - firstMonth) + 1
-    if (occurrenceNumber < 1 || occurrenceNumber > maxOcorrencias) return false
+    return occurrence <= Number(rule.valor_termino)
   }
+  // 'horizonte' is bounded by the projection window, like 'nunca'.
+  return true
+}
 
-  switch (rule.frequencia) {
-    case 'mensal':
-      return day === rule.dia_do_mes
-
-    case 'quinzenal':
-      return day === rule.dia_do_mes || day === rule.dia_do_mes + 15
-
-    case 'semanal': {
-      const inicio = new Date(rule.data_inicio + 'T12:00:00')
-      const current = new Date(dateISO + 'T12:00:00')
-      return inicio.getDay() === current.getDay()
-    }
-
-    case 'unico':
-      return dateISO === rule.data_inicio
-
-    default:
-      return false
-  }
+export function projectionHorizon(anchor: string, start: string, months: number): number {
+  const [ay, am] = anchor.split('-').map(Number)
+  const [sy, sm] = start.split('-').map(Number)
+  return Math.max(0, (sy - ay) * 12 + sm - am + months)
 }
 
 export function runProjection(input: ProjectionInput): ProjectionResult {
@@ -104,9 +101,10 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
   const startYear = anchorYear
 
   const today = new Date()
-  const todayISO = toISO(today.getFullYear(), today.getMonth(), today.getDate())
+  const todayISO = input.todayISO ?? new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(today)
 
-  let saldo = settings.saldo_abertura
+  const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
+  let saldo = money(settings.saldo_abertura)
   let firstNegativeDate: string | null = null
   const months: MonthResult[] = []
 
@@ -120,7 +118,9 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
     const saldoAbertura = saldo
 
     const valorMensalDiario = dailyBudgets.reduce((sum, b) => sum + b.valor_mensal, 0)
-    const diarioPorDia = valorMensalDiario > 0 ? valorMensalDiario / N : 0
+    const monthlyCents = Math.max(0, Math.round(valorMensalDiario * 100))
+    const dailyCents = Math.floor(monthlyCents / N)
+    const remainder = monthlyCents % N
 
     let totalEntradas = 0
     let totalSaidas = 0
@@ -128,9 +128,11 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
 
     for (let d = 1; d <= N; d++) {
       const dateISO = toISO(year, month, d)
-      const diario = diarioPorDia
-      saldo -= diario
-      totalSaidas += diario
+      if (dateISO < settings.data_ancora) continue
+      // Spread leftover cents over the first days; full months conserve the budget.
+      const diario = (dailyCents + (d <= remainder ? 1 : 0)) / 100
+      saldo = money(saldo - diario)
+      totalSaidas = money(totalSaidas + diario)
 
       const events: DayEvent[] = []
 
@@ -141,16 +143,16 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
           ruleId: rule.id,
           descricao: rule.descricao,
           categoria: rule.categoria,
-          valor: rule.valor,
+          valor: money(rule.valor),
           tipo: rule.tipo,
         })
 
         if (rule.tipo === 'entrada') {
-          saldo += rule.valor
-          totalEntradas += rule.valor
+          saldo = money(saldo + money(rule.valor))
+          totalEntradas = money(totalEntradas + money(rule.valor))
         } else {
-          saldo -= rule.valor
-          totalSaidas += rule.valor
+          saldo = money(saldo - money(rule.valor))
+          totalSaidas = money(totalSaidas + money(rule.valor))
         }
       }
 
@@ -161,21 +163,21 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
           id: tx.id,
           descricao: tx.descricao,
           categoria: tx.categoria,
-          valor: tx.valor,
+          valor: money(tx.valor),
           tipo: tx.tipo,
         })
 
         if (tx.tipo === 'entrada') {
-          saldo += tx.valor
-          totalEntradas += tx.valor
+          saldo = money(saldo + money(tx.valor))
+          totalEntradas = money(totalEntradas + money(tx.valor))
         } else {
-          saldo -= tx.valor
-          totalSaidas += tx.valor
+          saldo = money(saldo - money(tx.valor))
+          totalSaidas = money(totalSaidas + money(tx.valor))
         }
       }
 
-      const inSum  = events.filter(e => e.tipo === 'entrada').reduce((a, e) => a + e.valor, 0)
-      const outSum = events.filter(e => e.tipo === 'saida').reduce((a, e) => a + e.valor, 0)
+      const inSum  = money(events.filter(e => e.tipo === 'entrada').reduce((a, e) => a + e.valor, 0))
+      const outSum = money(events.filter(e => e.tipo === 'saida').reduce((a, e) => a + e.valor, 0))
 
       const isFirstNeg = !firstNegativeDate && saldo < 0
       if (isFirstNeg) firstNegativeDate = dateISO

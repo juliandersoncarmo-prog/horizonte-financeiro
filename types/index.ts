@@ -82,5 +82,6 @@ export interface ProjectionInput {
   recurringRules: RecurringRule[]
   transactions: Transaction[]
   dailyBudgets: DailyBudget[]
+  todayISO?: string         // optional civil date for deterministic tests
   horizonMonths: number
 }

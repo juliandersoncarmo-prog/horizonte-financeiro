@@ -7,6 +7,5 @@ export default async function HomePage() {
   const endYear = now.getFullYear() + 5
   const months = (endYear - now.getFullYear()) * 12 + (12 - now.getMonth())
   const projection = await getProjectionData(startDate, months)
-  console.log('page projection:', JSON.stringify(projection).slice(0, 500))
   return <LedgerView projection={projection} />
 }
