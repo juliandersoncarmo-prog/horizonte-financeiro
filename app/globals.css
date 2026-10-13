@@ -276,7 +276,7 @@ body {
 /* Session 19: explicit tracks shared by header and rows; no mode-specific offsets. */
 @media (max-width: 639px) {
   .ledger-months .month-table-heading, .ledger-months .month-day-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding-left: 8px; padding-right: 8px; gap: 6px;
   }
   .month-day-row > div:nth-child(2) > span,
@@ -313,7 +313,7 @@ body {
   [role="dialog"] { overscroll-behavior: contain; }
 }
 @media (max-width: 359px) {
-  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 4px; }
+  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
   .ledger-months .month-day-row .day-mid-value > span.num,
   .ledger-months .month-day-row .daily-display > span.num,
   .ledger-months .month-day-row .day-balance .num { font-size: 12px; }
@@ -323,4 +323,30 @@ body {
   .mobile-drawer > button:first-child { position: sticky; top: 0; z-index: 5; background: var(--surface); }
   .settings-page input { font-size: 16px; min-height: 44px; min-width: 0; max-width: 100%; }
   .settings-page button { min-height: 44px; }
+}
+
+/* Session 20: mobile-only recovery, equal tracks and isolated edit actions. */
+@media (max-width: 639px) {
+  /* ChoiceField's later display:flex must not reveal the desktop year control. */
+  .ledger-controls .choice-trigger.ledger-year { display: none; }
+  .ledger-controls .month-navigation { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .ledger-controls .mobile-month-select > span { white-space: nowrap; overflow-wrap: normal; }
+  .ledger-controls .mobile-month-select { width: 100%; min-width: 0; font-size: clamp(14px, 4.2vw, 17px); }
+  /* The same 100%-wide box is centered in the middle track for every mode. */
+  .ledger-months .day-mid-value { width: 100%; justify-self: stretch; }
+  .ledger-months .day-mid-value > span.num,
+  .ledger-months .daily-display > span.num { width: 100%; }
+  .month-table-heading .mobile-column-mode { width: 100%; }
+  .month-table-heading .column-mode-trigger { width: 100%; justify-content: center; }
+  /* Adjacent 40x44 touch targets; icons face inward with an 8px visual gap. */
+  .event-actions .event-action { width: 40px; height: 44px; padding: 0; }
+  .event-actions .event-action:first-child { justify-content: flex-end; padding-right: 4px; }
+  .event-actions .event-action:last-child { justify-content: flex-start; padding-left: 4px; }
+  .card-first-month .month-field > span { white-space: nowrap; overflow-wrap: normal; }
+}
+@media (min-width: 390px) and (max-width: 639px) {
+  .card-month-fields { display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 8px; width: 100%; }
+  .card-month-fields > label { white-space: normal; font-size: 12px; line-height: 18px; }
+  .card-first-month > p { min-height: 36px; display: flex; align-items: flex-end; }
+  .card-first-month .month-field { font-size: 14px; padding-left: 8px; padding-right: 8px; gap: 6px; }
 }
