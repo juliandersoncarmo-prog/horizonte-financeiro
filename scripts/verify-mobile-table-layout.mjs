@@ -38,7 +38,7 @@ try {
     })
     assert(Math.abs(metrics.card.left - metrics.kpi.left) <= 1); assert(Math.abs(metrics.card.right - metrics.kpi.right) <= 1)
     assert(Math.abs(metrics.card.left - (width - metrics.card.right)) <= 1)
-    assert.equal(metrics.date.font, 15); assert.equal(metrics.weekday.font, 12)
+    assert.equal(metrics.date.font, 17); assert.equal(metrics.weekday.font, 14)
     assert.equal(metrics.value.font, width < 360 ? 15 : 16); assert.equal(metrics.balance.font, width < 360 ? 15 : 16)
     assert.equal(metrics.headingGrid, metrics.rowGrid)
     assert(metrics.mid.left - metrics.dateGroup.right >= 5); assert(metrics.balance.left - metrics.mid.right >= 5)

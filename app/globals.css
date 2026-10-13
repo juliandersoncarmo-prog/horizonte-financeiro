@@ -307,8 +307,8 @@ body {
   .ledger-months .month-day-row { height: 40px; min-height: 40px; padding-top: 2px; padding-bottom: 2px; border-bottom: 1px solid var(--border); }
   .ledger-months .month-day-row:last-child { border-bottom: 0; }
   .ledger-months .month-day-row > button { min-height: 34px; display: flex; align-items: center; gap: 4px; }
-  .ledger-months .month-day-row > button .num { font-size: 15px; font-weight: 600; }
-  .ledger-months .month-day-row > button > span:last-child { font-size: 12px; margin-left: 0; color: var(--text-2); }
+  .ledger-months .month-day-row > button .num { font-size: 17px; line-height: 20px; font-weight: 600; }
+  .ledger-months .month-day-row > button > span:last-child { font-size: 14px; line-height: 16px; margin-left: 0; color: var(--text-2); }
   .ledger-months .day-mid-value { text-align: center; }
   .ledger-months .day-balance { text-align: right; }
   .ledger-months .day-mid-value > span.num, .ledger-months .daily-display > span.num, .ledger-months .day-balance > span.num {
