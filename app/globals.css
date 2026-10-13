@@ -232,3 +232,7 @@ body {
   .month-day-row { min-height: 44px; }
   .month-heading h2 > span { right: 4px; top: 15px; pointer-events: none; }
 }
+
+@media (max-width: 639px) {
+  .mobile-swipe-area { touch-action: pan-y pinch-zoom; }
+}

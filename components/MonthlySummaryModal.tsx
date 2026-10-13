@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X, Wallet, ArrowDownLeft, ArrowUpRight, TrendingUp, CreditCard, Landmark } from 'lucide-react'
 import ModalPortal from './ModalPortal'
+import { useMobileSwipe } from '@/hooks/useMobileSwipe'
 import { useProjection } from './ProjectionProvider'
 import { formatBRL, monthLabel } from '@/lib/engine/projection'
 import { monthSummary, summaryColor, summaryInitialIndex } from '@/lib/engine/month-summary'
@@ -13,6 +14,10 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
   const index = months.findIndex(month => month.label === selected)
   const month = months[index]
   const dialog = useRef<HTMLDivElement>(null)
+  const swipe = useMobileSwipe(direction => {
+    const next = months[index + direction]
+    if (next) setSelected(next.label)
+  })
   const summary = month ? monthSummary(month) : null
   const metrics = month && summary ? [
     { label: 'Saldo no início do mês', value: month.saldoAbertura, Icon: Wallet, color: summaryColor(month.saldoAbertura) },
@@ -21,7 +26,7 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
     { label: summary.resultado > 0 ? 'Sobrou no mês' : summary.resultado < 0 ? 'Faltou no mês' : 'Resultado do mês', value: summary.resultado, Icon: TrendingUp, color: summaryColor(summary.resultado) },
   ] : []
   return <ModalPortal label="Resumo Mensal" onClose={onClose}>
-    <div ref={dialog} tabIndex={-1} className="summary-panel relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
+    <div {...swipe} ref={dialog} tabIndex={-1} className="mobile-swipe-area summary-panel relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
       <div className="flex items-center justify-between mb-4"><h2 id="summary-title" className="text-lg font-semibold">Resumo Mensal</h2><button aria-label="Fechar resumo mensal" onClick={onClose}><X /></button></div>
       {month && summary ? <>
         <div className="flex items-center justify-between gap-2 mb-3">

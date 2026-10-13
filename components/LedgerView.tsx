@@ -8,6 +8,7 @@ import KpiCard from './KpiCard'
 import MonthColumn, { type Mode } from './MonthColumn'
 import DayDetail from './DayDetail'
 import LedgerControls from './LedgerControls'
+import { useMobileSwipe } from '@/hooks/useMobileSwipe'
 
 
 const MONTHS_SHORT = ['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.']
@@ -44,6 +45,9 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   const maxStart = Math.max(0, months.length - visible)
   const safeStart = Math.min(startIndex, maxStart)
   const visibleMonths = months.slice(safeStart, safeStart + visible)
+  const swipe = useMobileSwipe(direction => {
+    setStartIndex(Math.min(maxStart, Math.max(0, safeStart + direction)))
+  }, () => !!document.querySelector('[role="dialog"], [aria-modal="true"], .fixed.inset-0'))
 
   const selectedDay = useMemo<DayResult | null>(
     () => selectedDate ? (months.flatMap(m => m.days).find(d => d.date === selectedDate) ?? null) : null,
@@ -66,7 +70,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   )
 
   return (
-    <div className="ledger-view flex flex-col h-full overflow-hidden">
+    <div {...swipe} className="mobile-swipe-area ledger-view flex flex-col h-full overflow-hidden">
       {/* KPI cards */}
       <div className="ledger-kpis grid grid-cols-3 gap-3 px-6 py-4 flex-none">
         <KpiCard
