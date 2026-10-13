@@ -82,3 +82,34 @@ it('rejects a negative value and persists decimal comma only after confirmation'
  expect(m.save).toHaveBeenCalledWith('2026-10-02', 123.45)
  expect(host.querySelector('input')).toBeNull()
 })
+
+it('restores the pencil after brief confirmed feedback and can edit the same day again', async () => {
+ vi.useFakeTimers()
+ try {
+  m.save.mockResolvedValue({ success: true })
+  await render(<Calendar />); await saveDay('25')
+  const pencil = () => host.querySelector('button[aria-label="Editar Diário em 2026-10-02"]')!
+  expect(pencil().querySelector('.lucide-check')).not.toBeNull()
+  await act(() => vi.advanceTimersByTime(1200))
+  expect(pencil().querySelector('.lucide-pencil')).not.toBeNull()
+  expect(host.querySelector('[role="status"]')).toBeNull()
+  await click('Editar Diário em 2026-10-02')
+  expect(host.querySelector('input')!.value).toBe('25')
+  await enter('input', '30'); await click('Confirmar Diário')
+  expect(m.save).toHaveBeenCalledTimes(2)
+  await click('Editar Diário em 2026-10-02')
+  expect(host.querySelector('input')!.value).toBe('30')
+  await act(() => vi.advanceTimersByTime(1200))
+  expect(host.querySelector('input')!.value).toBe('30')
+  await click('Cancelar Diário')
+ } finally { vi.useRealTimers() }
+})
+it('keeps the editor and entered amount after a transport rejection, then permits retry', async () => {
+ m.save.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ success: true })
+ await render(<Calendar />); await saveDay('45')
+ expect(host.querySelector('input')!.value).toBe('45')
+ expect(host.querySelector('[role="alert"]')!.textContent).toContain('Falha de comunicação')
+ expect(host.querySelector('button[aria-label="Confirmar Diário"]')!.hasAttribute('disabled')).toBe(false)
+ await click('Confirmar Diário')
+ expect(m.save).toHaveBeenCalledTimes(2); expect(host.querySelector('input')).toBeNull()
+})

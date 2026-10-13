@@ -22,3 +22,30 @@ Limite de toque: a linha aprovada tem40px, com padding vertical de2px. Para cabe
 
 ## Estado de entrega
 Código preparado em branch isolada, sem merge. Não publicado: não há runtime para gerar e empacotar o build conforme o fluxo Sites. A versão16 já publicada permanece intacta. Critérios de aceitação ainda não comprovados; entrega parcial.
+
+## Retomada — 13/10/2026
+HEAD GitHub reconferido: fix/horizonte-mobile-editor-final em 505d364355dd833e683d7eaa4b44b61db7ae1a94. Trabalho preservado na mesma branch, em nova worktree. Relatório anterior e guia CSS da instalação Next lidos. Site reconferido como privado do proprietário, versão16. Source hospedado aberto pelo helper oficial em 9f153538010a3ec681a06ff9c3fdf04e3294d6a0.
+
+### Ajuste incremental de toque
+Somente o CSS mobile do editor mudou nesta retomada: coluna dos botões de32 para36px, cada alvo de18 para20px; form absoluto com40px de altura total, sem impacto no dimensionamento da linha/track. Ícones seguem14px e input segue32px de altura, fonte16px e largura até90px adaptada ao track. ✓ e × permanecem em duas linhas internas imediatamente à direita do campo. Nenhum pseudo-elemento invisível invade o input ou botões vizinhos. Não foram alteradas regras do estado normal, Data, Saldo, margens, colunas ou desktop.
+
+Limite explicitamente mantido: alvos36x20px são maiores que32x18px, porém a altura ainda é inferior a24px. NÃO se declara conformidade completa de tamanho de alvo. Dois alvos retangulares de24px não cabem verticalmente numa linha fixa de40px sem exceder seus limites. O pedido de ampliar os alvos foi atendido dentro do espaço disponível, com essa restrição; ampliar além disso exige rever altura ou disposição. Não foi usada sobreposição de áreas invisíveis para simular um alvo maior.
+
+### Verificações desta retomada
+- npm ci pelo lockfile: concluído. Primeira tentativa usando node_modules anterior encontrou happy-dom ausente; corrigida com instalação completa local, sem alterar dependências/lockfile.
+- Vitest: 256 testes em35 arquivos passaram. Novos testes exercitam expiração do check em1200ms, retorno do Pencil, reedição do mesmo dia inclusive durante confirmação, cancelamento, rejeição de comunicação e nova tentativa. Suíte existente comprova persistência antes de projeção, locks, zero, remoção, cancelamento/Escape e erros (actions mockadas).
+- TypeScript --noEmit: passou.
+- Lint do repositório: passou sem erros ou warnings de código.
+- Next16.2.9 build --webpack: passou.
+- TypeScript do checkout hospedado: passou. Lint hospedado: zero erros, um warning preexistente em app/(auth)/login/page.tsx sobre window.location.assign, preservado fora do escopo.
+- git diff --check: passou.
+
+### Isolamento e limites atuais
+Chave pública anon lida exclusivamente do projeto hsvjkbfpvmtnehjbwtgr para os builds, por stdin, sem gravar credenciais em arquivos nem alterar o runtime existente. Nenhuma consulta/escrita financeira, SQL, migração, mudança de auth/RLS ou acesso ao banco original. Main/backup permanecem e4ba912f14db49b98b3e9129c27670b7bf050d48.
+
+control-browser não está disponível. Conforme Sites managed-linux, preview não iniciado e não foi improvisada outra via de browser. Portanto geometria renderizada em320/375/390/430px, cortes/sobreposições, teclado virtual Android/iOS e persistência end-to-end continuam NÃO verificados. Happy-dom não calcula geometria. Regras CSS são uniformes até639px e independentes da altura do viewport; isso é inspeção, não teste em aparelho. A latência de1–2s ainda não foi medida em rede/servidor; nenhuma otimização especulativa foi feita.
+
+Build Sites e publicação do pacote correspondente serão registrados abaixo quando confirmados. Esta retomada não declara todos os critérios de aceitação comprovados: faltam validação visual/teclado e o limite de altura dos alvos continua explícito.
+
+### Pacote hospedado validado
+Build Sites/Vinext concluído com sucesso. Verificadores verify-hosted-css.mjs e verify-hosted-auth.mjs passaram: CSS e configuração pública exclusiva do projeto de testes presentes no bundle. Nenhuma validação end-to-end ou de geometria é inferida desses verificadores. O commit de implementação desta retomada é b298545 (histórico da mesma branch); a publicação e seus IDs serão anexados após resposta nativa Sites.

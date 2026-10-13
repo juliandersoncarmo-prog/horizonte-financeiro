@@ -327,10 +327,10 @@ body {
     container: daily-editor / inline-size; min-width: 0;
   }
   .ledger-months .daily-editor-form {
-    display: grid; grid-template-columns: minmax(0, 1fr) 32px;
-    grid-template-rows: repeat(2, 18px); align-items: center;
-    column-gap: 4px; row-gap: 0; height: 36px;
-    width: min(126px, 100%); min-width: 0; margin: 0 auto;
+    display: grid; grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-rows: repeat(2, 20px); align-items: center;
+    column-gap: 4px; row-gap: 0; height: 40px;
+    width: min(130px, 100%); min-width: 0; margin: 0 auto;
   }
   .ledger-months .daily-editor-input {
     grid-column: 1; grid-row: 1 / 3; box-sizing: border-box;
@@ -339,7 +339,7 @@ body {
   }
   .ledger-months .daily-editor-form button {
     grid-column: 2; box-sizing: border-box;
-    width: 32px; min-width: 32px; height: 18px; min-height: 18px;
+    width: 36px; min-width: 36px; height: 20px; min-height: 20px;
     padding: 0; justify-self: center; touch-action: manipulation;
   }
   .ledger-months .daily-editor-form button[type="button"] { grid-row: 2; }
@@ -348,7 +348,7 @@ body {
     outline: 2px solid var(--accent); outline-offset: -2px;
   }
   .ledger-months .daily-editor-error {
-    top: calc(50% + 18px); width: auto; max-width: 100%; inset-inline: 0;
+    top: calc(50% + 20px); width: auto; max-width: 100%; inset-inline: 0;
     overflow-wrap: anywhere;
   }
 
