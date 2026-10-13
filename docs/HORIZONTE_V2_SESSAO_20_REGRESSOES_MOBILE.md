@@ -32,4 +32,6 @@ Build Vinext inicial compilou, mas verificador detectou configuração pública 
 Sem control-browser disponível no ambiente managed. A skill Sites impede improvisar outro navegador/preview nessa situação. Não houve capturas antes/depois, medição real de caixas, inspeção de overflow ou confirmação em Android. As capturas do usuário foram usadas como referência. O alinhamento está demonstrado algebricamente na estrutura CSS, mas o critério de coincidência de centros renderizados ainda depende de medição em navegador. Não declarar validação visual concluída ou garantia definitiva sem essa etapa.
 
 ## Publicação
-Resultado e SHA source serão acrescentados após confirmação do Sites. Nenhuma publicação em produção original.
+Publicação confirmada: succeeded. Source Sites: 75f3662d5af2c66bfd275d9f39f97e94c7937ac5. Versão: appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_c9c12c5fbaa0819197576d87da82c4da. Deployment: appgdep_6ace0812098c819194d5b99eca506992. Runtime revisão 1 preservado. Build Vinext e verificadores CSS/auth aprovados após incorporar também a chave pública anon existente do projeto autorizado (a leitura do runtime a ocultava como null). Nenhuma criação/rotação de chaves. Nenhuma publicação em produção original.
+
+Commit GitHub de implementação: e0716db9082b9eb4b6599086747d8e878c475d82. O commit documental seguinte acrescenta este resultado, sem nova alteração funcional.
