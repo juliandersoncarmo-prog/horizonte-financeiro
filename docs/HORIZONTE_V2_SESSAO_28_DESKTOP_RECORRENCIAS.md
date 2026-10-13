@@ -79,3 +79,16 @@ Limites: não há control-browser disponível nesta sessão; nenhuma validação
 Publicação autorizada exclusivamente no site atual, após os checks acima. Os identificadores finais de commit/version/deployment e o resultado nativo são registrados na entrega e no complemento final deste relatório.
 
 Reversão de interface, se necessária: republicar a versão 17. A migração é compatível com a versão anterior e pode permanecer; não aplicar DROP de tabelas/colunas com dados nem apagar cancelamentos para reverter o front-end.
+
+### Resultado final
+
+- Publicação nativa: succeeded em 13/10/2026 19:02:02 UTC (16:02:02 em Fortaleza).
+- Versão publicada: 18.
+- Commit GitHub da implementação: cd1796499ce5abe15eb5d655d204dae8c1e4bc2b.
+- Commit da fonte hospedada: 61f643c7c88c04040bb45e68afdcbf67e09b5232. Os arquivos de runtime alterados foram comparados byte a byte com a branch GitHub, sem diferenças; adapters de hospedagem são mantidos separados.
+- Deployment: appgdep_6ace8013e118819180a5e4c55e7c8681.
+- Version ID: appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_e9ab03686dc081918103d4b9573f5c8c.
+- Ambiente publicado: revisão 1, inalterada.
+- URL publicada: https://horizonte-testes-autenticado.juliandersoncarmo.chatgpt.site.
+- Push Git por linha de comando não tinha credencial de escrita GitHub; a mesma árvore validada foi sincronizada pelo conector GitHub. Tree SHA 202713589f465fb8b87e9af382f91fcd03391333 corresponde exatamente à árvore do commit local.
+- O complemento de publicação é um commit apenas documental na mesma branch. Não exige novo build/deploy e não altera o runtime validado.
