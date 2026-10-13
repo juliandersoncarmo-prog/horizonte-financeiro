@@ -327,26 +327,29 @@ body {
     container: daily-editor / inline-size; min-width: 0;
   }
   .ledger-months .daily-editor-form {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: center;
-    align-items: center; gap: 4px; height: auto; width: min(90px, 100%); min-width: 0; margin: 0 auto;
+    display: grid; grid-template-columns: minmax(0, 1fr) 32px;
+    grid-template-rows: repeat(2, 18px); align-items: center;
+    column-gap: 4px; row-gap: 0; height: 36px;
+    width: min(126px, 100%); min-width: 0; margin: 0 auto;
   }
   .ledger-months .daily-editor-input {
-    grid-column: 1 / -1; justify-self: center; box-sizing: border-box;
-    width: min(90px, 100%); max-width: 100%; min-width: 0;
+    grid-column: 1; grid-row: 1 / 3; box-sizing: border-box;
+    width: 100%; max-width: 90px; min-width: 0;
     height: 32px; padding: 0 4px; font-size: 16px; line-height: 20px;
   }
   .ledger-months .daily-editor-form button {
-    box-sizing: border-box; width: 32px; min-width: 32px; height: 32px;
-    min-height: 32px; padding: 0; justify-self: center; touch-action: manipulation;
+    grid-column: 2; box-sizing: border-box;
+    width: 32px; min-width: 32px; height: 18px; min-height: 18px;
+    padding: 0; justify-self: center; touch-action: manipulation;
   }
-  .ledger-months .month-day-row:has(.daily-editor-shell) { height: auto; min-height: 76px; }
+  .ledger-months .daily-editor-form button[type="button"] { grid-row: 2; }
+  .ledger-months .daily-editor-form button:not([type="button"]) { grid-row: 1; }
+  .ledger-months .daily-editor-form button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: -2px;
+  }
   .ledger-months .daily-editor-error {
-    top: calc(50% + 36px); width: auto; max-width: 100%; inset-inline: 0;
+    top: calc(50% + 18px); width: auto; max-width: 100%; inset-inline: 0;
     overflow-wrap: anywhere;
-  }
-  @container daily-editor (min-width: 162px) {
-    .ledger-months .daily-editor-form { grid-template-columns: 90px 32px 32px; width: 162px; }
-    .ledger-months .daily-editor-input { grid-column: auto; }
   }
 
 }

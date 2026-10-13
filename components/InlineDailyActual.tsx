@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pencil, Check, X } from 'lucide-react'
 import { useDailyEditor, useProjectionUpdate } from './ProjectionProvider'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,11 @@ export default function InlineDailyActual({ day }: { day: DayResult }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(''), 1200)
+    return () => window.clearTimeout(timer)
+  }, [notice])
   const displayValue = day.diarioRealizado != null || day.diarioPrevisto != null || day.diario > 0 ? `−${formatBRL(day.diario)}` : '—'
   async function save() {
     if (lock.current) return
