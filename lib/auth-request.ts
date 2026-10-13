@@ -22,6 +22,9 @@ export async function passwordSignIn(email: string, password: string): Promise<v
       body: JSON.stringify({ email: email.trim(), password }),
     }).catch(() => { throw new Error(signal.aborted ? AUTH_TIMEOUT_MESSAGE : 'Falha de conexão. Tente novamente.') })
     const result = await response.json().catch(() => { throw new Error('Não foi possível concluir o acesso. Recarregue a página e tente novamente.') })
-    if (!response.ok || result.success !== true) throw new Error(result.error || 'Não foi possível entrar. Tente novamente.')
+    if (!result || typeof result !== 'object' || !('success' in result) || !response.ok || result.success !== true) {
+      const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string' ? result.error : 'Não foi possível entrar. Tente novamente.'
+      throw new Error(message)
+    }
   }, 15000)
 }

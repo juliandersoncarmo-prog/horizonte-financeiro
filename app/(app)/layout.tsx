@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [year, month] = today.split('-').map(Number)
   const projection = await getProjectionData(`${year}-${String(month).padStart(2, '0')}-01`, 60 + 13 - month)
   return (
-    <ProjectionProvider projection={projection}>
+    <ProjectionProvider key={user.id} projection={projection}>
       <div className="app-shell flex h-full">
         <Sidebar profile={profile} />
         <main className="app-main min-w-0 flex-1 overflow-hidden flex flex-col">{children}</main>

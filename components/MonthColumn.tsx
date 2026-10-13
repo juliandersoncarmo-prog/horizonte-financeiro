@@ -106,7 +106,7 @@ export default function MonthColumn({
               </button>
 
               {/* Coluna central */}
-              <div className="text-center min-w-0">
+              <div className="day-mid-value text-center min-w-0">
                 {mode === 'diario' ? <InlineDailyActual day={day} /> : <>
                 <span className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :

@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createUserDataClient } from '@/lib/supabase/service'
 import { runProjection, projectionHorizon } from '@/lib/engine/projection'
 import { validMoney, validDueDay } from '@/lib/cards'
-import type { ProjectionResult, RecurringRule, Transaction, DailyBudget } from '@/types'
+import type { ProjectionResult, ProjectionInput, RecurringRule, Transaction, DailyBudget, DailyActual } from '@/types'
 
 function validCivilDate(value: string): boolean {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -74,8 +74,9 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    const result = runProjection({ cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months) })
-    return { ...result, cardData, editorData: { recurringRules, dailyBudgets } }
+    const inputSnapshot: ProjectionInput = { cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months), todayISO: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()) }
+    const result = runProjection(inputSnapshot)
+    return { ...result, inputSnapshot, cardData, editorData: { recurringRules, dailyBudgets } }
   } catch (err) {
     unstable_rethrow(err)
     throw err
@@ -320,7 +321,7 @@ export async function deleteDailyBudget(id: string): Promise<{ success: boolean;
   }
 }
 
-export async function updateDailyBudget(id: string, valorMensal: number, descricao?: string): Promise<{ success: boolean; error?: string }> {
+export async function updateDailyBudget(id: string, valorMensal: number, descricao?: string): Promise<{ success: boolean; error?: string; budget?: DailyBudget }> {
   try {
     if (!Number.isFinite(valorMensal) || valorMensal < 0 || valorMensal > 999999999 || (descricao !== undefined && (typeof descricao !== 'string' || !descricao.trim()))) return { success: false, error: 'Orçamento inválido.' }
     const userId = await getAuthenticatedUserId()
@@ -330,9 +331,9 @@ export async function updateDailyBudget(id: string, valorMensal: number, descric
       .update({ valor_mensal: valorMensal, ...(descricao !== undefined ? { descricao: descricao.trim() } : {}) })
       .eq('id', id)
       .eq('user_id', userId)
-      .select('id')
+      .select('id, descricao, categoria, valor_mensal, mes_referencia')
     if (error || !data?.length) return { success: false, error: 'Não foi possível alterar o orçamento. Verifique se ele ainda existe e pertence à sua conta.' }
-    return { success: true }
+    return { success: true, budget: { ...data[0], valor_mensal: Number(data[0].valor_mensal) } }
   } catch (err) {
     console.error('updateDailyBudget error:', err)
     return { success: false, error: String(err) }
@@ -342,19 +343,19 @@ export async function updateDailyBudget(id: string, valorMensal: number, descric
 export async function addDailyBudget(formData: {
   descricao: string
   valor_mensal: number
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; budget?: DailyBudget }> {
   try {
-    if (!Number.isFinite(formData.valor_mensal) || formData.valor_mensal < 0 || formData.valor_mensal > 999999999) return { success: false, error: "Orçamento inválido." }
+    if (typeof formData.descricao !== 'string' || !formData.descricao.trim() || !Number.isFinite(formData.valor_mensal) || formData.valor_mensal < 0 || formData.valor_mensal > 999999999) return { success: false, error: "Orçamento inválido." }
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
-    const { error } = await supabase.from('daily_budgets').insert({
+    const { data, error } = await supabase.from('daily_budgets').insert({
       user_id:      userId,
-      descricao:    formData.descricao,
+      descricao:    formData.descricao.trim(),
       categoria:    '',
       valor_mensal: formData.valor_mensal,
-    })
-    if (error) return { success: false, error: error.message }
-    return { success: true }
+    }).select('id, descricao, categoria, valor_mensal, mes_referencia')
+    if (error || !data?.length) return { success: false, error: 'Não foi possível salvar o orçamento.' }
+    return { success: true, budget: { ...data[0], valor_mensal: Number(data[0].valor_mensal) } }
   } catch (err) {
     console.error('addDailyBudget error:', err)
     return { success: false, error: String(err) }
@@ -369,7 +370,7 @@ export async function signOut(): Promise<void> {
 
 function diarioEnabled() { return process.env.DIARIO_INTELIGENTE_ENABLED === 'true' }
 
-export async function saveDailyActual(data: string, valor: number | null): Promise<{ success: boolean; error?: string }> {
+export async function saveDailyActual(data: string, valor: number | null): Promise<{ success: boolean; error?: string; actual?: DailyActual | null }> {
   try {
     if (!diarioEnabled()) return { success: false, error: 'Diário inteligente aguarda habilitação no ambiente de testes.' }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || !Number.isFinite(Date.parse(data + 'T00:00:00Z'))
@@ -379,11 +380,16 @@ export async function saveDailyActual(data: string, valor: number | null): Promi
     }
     const userId = await getAuthenticatedUserId()
     const db = await createUserDataClient()
-    const result = valor === null
-      ? await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
-      : await db.from('daily_actuals').upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })
-    if (result.error) return { success: false, error: 'Não foi possível salvar o Diário.' }
-    return { success: true }
+    if (valor === null) {
+      const { error } = await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
+      if (error) return { success: false, error: 'Não foi possível salvar o Diário.' }
+      return { success: true, actual: null }
+    }
+    const { data: saved, error } = await db.from('daily_actuals')
+      .upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })
+      .select('data,valor').single()
+    if (error || !saved) return { success: false, error: 'Não foi possível salvar o Diário.' }
+    return { success: true, actual: { data: String(saved.data), valor: Number(saved.valor) } }
   } catch { return { success: false, error: 'Não foi possível salvar o Diário.' } }
 }
 

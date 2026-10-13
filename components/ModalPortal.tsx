@@ -19,7 +19,7 @@ export default function ModalPortal({ children, onClose, label }: {
     background.forEach(el => { el.inert = true })
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    document.body.append(container)
+    document.body.appendChild(container)
     const focusable = () => [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? [])].filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true')
     ;(focusable()[0] ?? panel.current)?.focus()
     function keydown(event: KeyboardEvent) {

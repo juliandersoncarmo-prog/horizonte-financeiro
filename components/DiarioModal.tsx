@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useOptionalProjection } from './ProjectionProvider'
+import { useOptionalProjection, useProjectionUpdate } from './ProjectionProvider'
 import ModalPortal from './ModalPortal'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
 import { getAllDailyBudgets, addDailyBudget, deleteDailyBudget, updateDailyBudget } from '@/app/actions'
@@ -21,6 +21,7 @@ interface Props {
 
 export default function DiarioModal({ onClose }: Props) {
   const router = useRouter()
+  const updateProjection = useProjectionUpdate()
   const snapshot = useOptionalProjection()?.editorData?.dailyBudgets
   const lock = useRef(false)
   const [notice, setNotice] = useState('')
@@ -54,13 +55,13 @@ export default function DiarioModal({ onClose }: Props) {
     return () => { active = false }
   }, [snapshot])
 
-  async function change(action: () => Promise<{ success: boolean; error?: string }>, after: () => void) {
+  async function change(action: () => Promise<{ success: boolean; error?: string; budget?: BudgetItem }>, after: (result: { budget?: BudgetItem }) => boolean | undefined) {
     if (lock.current) return
     lock.current = true; setSaving(true); setAddError(null); setNotice('')
     try {
       const result = await action()
       if (!result.success) { setAddError(result.error ?? 'Não foi possível salvar.'); return }
-      after(); setNotice('Alteração salva com sucesso.'); router.refresh()
+      const applied = after(result); setNotice('Alteração salva com sucesso.'); if (!applied) router.refresh()
     } catch { setAddError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
     finally { lock.current = false; setSaving(false); setAdding(false) }
   }
@@ -68,19 +69,28 @@ export default function DiarioModal({ onClose }: Props) {
     e.preventDefault()
     if (!newDescricao.trim() || !newValor || lock.current) return
     setAdding(true)
-    await change(() => addDailyBudget({ descricao: newDescricao.trim(), valor_mensal: Number(newValor) }), () => {
-      setNewDescricao(''); setNewValor(''); void loadItems()
+    await change(() => addDailyBudget({ descricao: newDescricao.trim(), valor_mensal: Number(newValor) }), result => {
+      setNewDescricao(''); setNewValor('');
+      if (!result.budget) { void loadItems(); return false }
+      const budget = result.budget
+      setItems(items => [...items, budget])
+      return updateProjection?.(input => ({ ...input, dailyBudgets: [...input.dailyBudgets, budget] }))
     })
   }
   async function handleDelete(id: string) {
     if (lock.current || !window.confirm('Excluir este orçamento mensal? Os valores realizados do Diário permanecem. A previsão e os saldos serão recalculados.')) return
-    await change(() => deleteDailyBudget(id), () => setItems(items => items.filter(item => item.id !== id)))
+    await change(() => deleteDailyBudget(id), () => {
+      setItems(items => items.filter(item => item.id !== id))
+      return updateProjection?.(input => ({ ...input, dailyBudgets: input.dailyBudgets.filter(item => item.id !== id) }))
+    })
   }
   async function handleSaveEdit(id: string) {
     if (!editValor || !editDescricao.trim()) return
     if (!window.confirm("Salvar nome e valor mensal? As previsões globais serão recalculadas; os registros realizados permanecem.")) return
-    await change(() => updateDailyBudget(id, Number(editValor), editDescricao), () => {
-      setItems(items => items.map(item => item.id === id ? { ...item, descricao: editDescricao.trim(), valor_mensal: Number(editValor) } : item)); setEditingId(null)
+    await change(() => updateDailyBudget(id, Number(editValor), editDescricao), result => {
+      const budget = result.budget
+      setItems(items => items.map(item => item.id === id ? budget ?? { ...item, descricao: editDescricao.trim(), valor_mensal: Number(editValor) } : item)); setEditingId(null)
+      return budget && updateProjection?.(input => ({ ...input, dailyBudgets: input.dailyBudgets.map(item => item.id === id ? budget : item) }))
     })
   }
 

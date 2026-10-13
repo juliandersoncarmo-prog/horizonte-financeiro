@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-const mock = vi.hoisted(() => ({ auth: vi.fn(), db: vi.fn(), revalidate: vi.fn(), eq: vi.fn(), upsert: vi.fn(), del: vi.fn() }))
+const mock = vi.hoisted(() => ({ auth: vi.fn(), db: vi.fn(), revalidate: vi.fn(), eq: vi.fn(), upsert: vi.fn(), del: vi.fn(), single: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: mock.auth } }) }))
 vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: mock.db }))
 vi.mock('next/cache', () => ({ revalidatePath: mock.revalidate }))
@@ -10,7 +10,7 @@ beforeEach(() => {
   mock.auth.mockResolvedValue({ data: { user: { id: 'owner' } } })
   mock.eq.mockReturnValue({ eq: mock.eq, error: null })
   mock.del.mockReturnValue({ eq: mock.eq })
-  mock.upsert.mockResolvedValue({ error: null })
+  mock.single.mockResolvedValue({ data: { data: '2026-01-01', valor: 0 }, error: null }); mock.upsert.mockReturnValue({ select: () => ({ single: mock.single }) })
   mock.db.mockReturnValue({ from: () => ({ upsert: mock.upsert, delete: mock.del }) })
 })
 describe('persistência Diário (Supabase simulado, sem rede)', () => {
@@ -20,5 +20,10 @@ describe('persistência Diário (Supabase simulado, sem rede)', () => {
   it('rejeita data impossível', async () => { expect((await saveDailyActual('2026-02-30', 0)).success).toBe(false); expect(mock.db).not.toHaveBeenCalled() })
   it('bloqueia escrita sem feature habilitada', async () => { vi.stubEnv('DIARIO_INTELIGENTE_ENABLED', 'false'); expect((await saveDailyActual('2026-01-01', 10)).success).toBe(false); expect(mock.db).not.toHaveBeenCalled() })
   it('bloqueia usuário sem sessão', async () => { mock.auth.mockResolvedValue({ data: { user: null } }); expect((await saveDailyActual('2026-01-01', 10)).success).toBe(false); expect(mock.db).not.toHaveBeenCalled() })
-  it('não anuncia sucesso após falha do banco', async () => { mock.upsert.mockResolvedValue({ error: { code: 'failure' } }); expect((await saveDailyActual('2026-01-01', 10)).success).toBe(false); expect(mock.revalidate).not.toHaveBeenCalled() })
+  it('não anuncia sucesso após falha do banco', async () => { mock.single.mockResolvedValue({ data: null, error: { code: 'failure' } }); expect((await saveDailyActual('2026-01-01', 10)).success).toBe(false); expect(mock.revalidate).not.toHaveBeenCalled() })
+})
+
+it('confirma o valor retornado pelo banco e rejeita resposta sem registro', async () => {
+ mock.single.mockResolvedValueOnce({ data: { data: '2026-01-01', valor: '12.34' }, error: null }); expect((await saveDailyActual('2026-01-01', 12.34)).actual).toEqual({ data: '2026-01-01', valor: 12.34 });
+ mock.single.mockResolvedValueOnce({ data: null, error: null }); expect((await saveDailyActual('2026-01-01', 12.34)).success).toBe(false)
 })

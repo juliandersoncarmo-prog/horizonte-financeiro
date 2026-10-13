@@ -217,7 +217,8 @@ body {
   .month-table-heading > span:last-child { padding-right: 6px; }
   .month-table-heading .desktop-column-mode { display: none; }
   .mobile-column-mode { display: block; position: relative; min-width: 0; max-width: 100%; }
-  .column-mode-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 0 3px; color: var(--text-2); font-size: 13px; font-weight: 600; border-radius: 8px; }
+  .column-mode-trigger { display: inline-grid; grid-template-columns: 14px auto 14px; align-items: center; justify-content: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 0 3px; color: var(--text-2); font-size: 13px; font-weight: 600; border-radius: 8px; }
+  .column-mode-trigger::before { content: ""; }
   .column-mode-trigger svg { flex-shrink: 0; transition: transform .15s; }
   .column-mode-trigger[aria-expanded="true"] { color: var(--accent); }
   .column-mode-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
@@ -225,9 +226,9 @@ body {
   .column-mode-menu { position: absolute; z-index: 30; top: 100%; left: 50%; transform: translateX(-50%); width: 140px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px #10204020; }
   .column-mode-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 10px; border-radius: 8px; color: var(--text); font-size: 13px; text-align: left; }
   .column-mode-menu button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .month-day-row .daily-display { display: grid; grid-template-columns: minmax(0, 1fr) 26px; gap: 2px; align-items: center; }
-  .month-day-row .daily-display > span { text-align: right; min-width: 0; }
-  .month-day-row .daily-display > button { width: 26px; min-height: 36px; justify-self: end; }
+  .month-day-row .daily-display { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 0; align-items: center; }
+  .month-day-row .daily-display > span { grid-column: 2; text-align: center; min-width: 0; }
+  .month-day-row .daily-display > button { grid-column: 3; width: 22px; min-height: 36px; justify-self: end; }
   .month-day-row > div:nth-child(2) > span { display: block; text-align: right; padding-right: 28px; white-space: normal; overflow-wrap: anywhere; }
   .month-day-row { min-height: 44px; }
   .month-heading h2 > span { right: 4px; top: 15px; pointer-events: none; }
@@ -235,4 +236,12 @@ body {
 
 @media (max-width: 639px) {
   .mobile-swipe-area { touch-action: pan-y pinch-zoom; }
+}
+
+/* Mobile value columns share a center, with symmetrical edit-icon space. */
+@media (max-width: 639px) {
+  .ledger-months .month-day-row .day-mid-value > span.num,
+  .ledger-months .month-day-row .daily-display > span.num,
+  .ledger-months .month-day-row .day-balance .num { font-size: 14px; }
+  .day-mid-value > span { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 }
