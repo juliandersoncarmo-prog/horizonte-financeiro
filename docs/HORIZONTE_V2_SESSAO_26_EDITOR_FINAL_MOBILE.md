@@ -48,4 +48,16 @@ control-browser não está disponível. Conforme Sites managed-linux, preview n�
 Build Sites e publicação do pacote correspondente serão registrados abaixo quando confirmados. Esta retomada não declara todos os critérios de aceitação comprovados: faltam validação visual/teclado e o limite de altura dos alvos continua explícito.
 
 ### Pacote hospedado validado
-Build Sites/Vinext concluído com sucesso. Verificadores verify-hosted-css.mjs e verify-hosted-auth.mjs passaram: CSS e configuração pública exclusiva do projeto de testes presentes no bundle. Nenhuma validação end-to-end ou de geometria é inferida desses verificadores. O commit de implementação desta retomada é b298545 (histórico da mesma branch); a publicação e seus IDs serão anexados após resposta nativa Sites.
+Build Sites/Vinext concluído com sucesso. Verificadores verify-hosted-css.mjs e verify-hosted-auth.mjs passaram: CSS e configuração pública exclusiva do projeto de testes presentes no bundle. Nenhuma validação end-to-end ou de geometria é inferida desses verificadores. Commit GitHub da implementação desta retomada: 6a20cec89407aa1e86312f1a0697ffe2ee983442. Os commits locais b298545 e8263101 foram sincronizados como uma única mudança pelo conector autenticado após o git push CLI falhar por ausência de credencial; a base505d364 foi preservada.
+
+
+### Publicação confirmada da retomada
+- Commit GitHub de implementação: 6a20cec89407aa1e86312f1a0697ffe2ee983442.
+- Commit source Sites: 6932101b0e01495fca8b6d99775002e8b3cb3dde.
+- Versão salva: appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_1a19fafa1a488191a9cfbe7cbdfdd142.
+- Deployment: appgdep_6ace49e2e58c8191b80819819e5cb822.
+- Resultado nativo: succeeded, 2026-10-13T15:10:49.827790+00:00.
+- URL exclusiva: https://horizonte-testes-autenticado.juliandersoncarmo.chatgpt.site.
+- Configuração runtime existente preservada (revision1); nenhuma alteração de sharing.
+
+Atualização de relatório posterior à publicação não muda código ou pacote. Entrega publicada e verificações automatizadas concluídas, mas aceitação integral continua pendente quanto à geometria/teclado real e ao tamanho vertical dos alvos. Próxima ação: validar em aparelhos/navegador disponível e, se forem exigidos alvos de24px ou mais de altura, rever o requisito de linha40px ou a disposição vertical dos controles. Não foi declarada conformidade completa de acessibilidade.
