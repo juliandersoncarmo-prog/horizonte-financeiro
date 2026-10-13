@@ -30,4 +30,10 @@ Não há `$control-browser` disponível. A skill Sites determina: “If $control
 ## Publicação
 Site preservado: `appgprj_6acd25d8d4708191b849f052ba7532ba`.
 URL: https://horizonte-testes-autenticado.juliandersoncarmo.chatgpt.site
-A versão publicada e o resultado da implantação serão registrados após confirmação pelo serviço Sites.
+Publicação confirmada pelo serviço Sites: **succeeded**, env revision 1 preservada.
+Commit GitHub de implementação: `a68c630ff545d8640d97cadc1334ca338d99bb37`. O relatório atualizado integra um commit documental posterior.
+Source Sites: `a3aae11b6a28788770049208c1dcfae1ddbc2316`.
+Versão: `appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_2221a1f9015c8191a73e8c103e2c6ca4`.
+Deployment: `appgdep_6acd7e13c8e48191ae0895f7500c8594`.
+Somente os cinco arquivos de interface alterados foram transportados para o source Sites aberto pelo helper oficial. Starter Vinext, proxy hospedado e configuração de autenticação preservados. Publicação com arquivo de build e SHA exatos retornados pelo helper, sem mudar audiência.
+Para conferir: abra a URL de testes novamente, escolha Diário/Entradas/Saídas no título central e abra Resumo na barra inferior. Verifique meses com valores longos e a rolagem até o fim do mês.
