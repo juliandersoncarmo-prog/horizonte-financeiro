@@ -1,5 +1,7 @@
 'use client'
 
+import ChoiceField from './ChoiceField'
+
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, Trash2, X } from 'lucide-react'
@@ -9,6 +11,7 @@ import type { RecurringRule, DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
 import { updateTransaction, updateRecurringRule, deleteTransaction, deleteRecurringRule } from '@/app/actions'
 import ModalPortal from './ModalPortal'
+import useConfirmation from './useConfirmation'
 import CreditCardsModal from './CreditCardsModal'
 import AddTransactionModal from './AddTransactionModal'
 
@@ -49,6 +52,7 @@ interface EditState {
 
 export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   const router = useRouter()
+  const { ask, confirmation } = useConfirmation()
   const projection = useOptionalProjection()
   const [deletingEvent, setDeletingEvent] = useState<DayEvent | null>(null)
   const lock = useRef(false)
@@ -92,7 +96,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     } catch { setEditError('Falha de comunicação. Verifique sua conexão antes de tentar novamente.') }
     finally { lock.current = false; setSaving(false) }
   }
-  async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); if (editing?.kind === 'rule' && !window.confirm('Salvar a regra inteira? Todas as ocorrências, inclusive passadas, serão recalculadas.')) return; await mutateEdit(false) }
+  async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); if (lock.current || refreshing) return; if (editing?.kind === 'rule' && !await ask('Salvar a regra inteira? Todas as ocorrências, inclusive passadas, serão recalculadas.')) return; await mutateEdit(false) }
 
   async function removeEvent() {
     const event = deletingEvent
@@ -116,17 +120,17 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     const prefix   = isEntrada ? ''                : '−'
     return (
       <div key={e.id ?? e.ruleId ?? e.invoiceId} className={`event-row flex items-center justify-between px-3 py-2 ${bg} rounded-xl`}>
-        <p className="text-sm font-medium text-text truncate min-w-0">{e.descricao}{e.incluido_diario ? " · incluída no Diário" : ""}</p>
-        <div className="flex items-center gap-2 ml-3 flex-none">
+        <p className="event-description text-sm font-medium text-text min-w-0">{e.descricao}{e.incluido_diario ? " · incluída no Diário" : ""}</p>
+        <div className="event-trailing flex items-center gap-2 ml-3 flex-none">
           <span className={`text-sm font-semibold num ${valColor}`}>{prefix}{formatBRL(e.valor)}</span>
-          <button
-            onClick={() => openEdit(e)}
+          <div className="event-actions"><button
+            disabled={saving || refreshing} onClick={() => openEdit(e)}
             className="event-action text-text-3 hover:text-accent transition-colors"
             aria-label={`Editar ${e.descricao}`} title="Editar"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          <button disabled={saving || refreshing} aria-label={`Excluir ${e.descricao}`} title="Excluir" onClick={() => { setEditError(null); setDeletingEvent(e) }} className="event-action text-text-3 hover:text-red"><Trash2 className="w-3.5 h-3.5" /></button>
+          <button disabled={saving || refreshing} aria-label={`Excluir ${e.descricao}`} title="Excluir" onClick={() => { setEditError(null); setDeletingEvent(e) }} className="event-action text-text-3 hover:text-red"><Trash2 className="w-3.5 h-3.5" /></button></div>
         </div>
       </div>
     )
@@ -137,9 +141,9 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
     <ModalPortal onClose={() => { if (!lock.current) onClose() }} label="Detalhes do dia">
 
       {/* Modal */}
-      <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-h-[80vh] overflow-y-auto">
+      <div className="day-detail-panel relative bg-surface rounded-2xl shadow-xl border border-border w-full">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
+        <div className="dialog-heading px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] text-text-3">{weekday}</p>
             <h3 className="text-xl font-bold text-text leading-tight num">
@@ -227,7 +231,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
       {editing && (
         <ModalPortal onClose={closeEdit} label={editing.kind === 'rule' ? 'Editar regra recorrente' : 'Editar lançamento'}>
           <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
-            <div className="flex items-center justify-between mb-5">
+            <div className="dialog-heading flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-text">
                 {editing.kind === 'rule' ? 'Editar recorrente' : 'Editar lançamento'}
               </h2>
@@ -265,10 +269,10 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
               </div>
               {editing.kind === 'transaction' && <label className={labelClass}>Data<input type="date" required value={editing.data} onChange={e => setEditing(state => state && ({ ...state, data: e.target.value }))} className={fieldClass} /></label>}
               {editing.kind === 'rule' && editing.rule && <>
-                <label className={labelClass}>Frequência<select className={fieldClass} value={editing.rule.frequencia} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, frequencia: e.target.value as RecurringRule['frequencia'] } }) : state)}>{[['mensal','Mensal'],['quinzenal','Duas vezes por mês'],['semanal','Semanal'],['unico','Uma vez']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label className={labelClass}>Frequência<ChoiceField label="Frequência" className={fieldClass} value={editing.rule.frequencia} onChange={value => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, frequencia: value as RecurringRule['frequencia'] } }) : state)} options={[['mensal','Mensal'],['quinzenal','Duas vezes por mês'],['semanal','Semanal'],['unico','Uma vez']].map(([value,label]) => ({value,label}))} /></label>
                 <label className={labelClass}>Dia do mês<input type="number" min="1" max="31" required className={fieldClass} value={editing.rule.dia_do_mes} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, dia_do_mes: Number(e.target.value) } }) : state)} /></label>
                 <label className={labelClass}>Data inicial<input type="date" required className={fieldClass} value={editing.rule.data_inicio} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, data_inicio: e.target.value } }) : state)} /></label>
-                <label className={labelClass}>Término<select className={fieldClass} value={editing.rule.modo_termino} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, modo_termino: e.target.value as RecurringRule['modo_termino'], valor_termino: null } }) : state)}>{[['nunca','Sem término'],['horizonte','Horizonte'],['ocorrencias','Quantidade de ocorrências'],['data','Data final']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label className={labelClass}>Término<ChoiceField label="Término" className={fieldClass} value={editing.rule.modo_termino} onChange={value => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, modo_termino: value as RecurringRule['modo_termino'], valor_termino: null } }) : state)} options={[['nunca','Sem término'],['horizonte','Horizonte'],['ocorrencias','Quantidade de ocorrências'],['data','Data final']].map(([value,label]) => ({value,label}))} /></label>
                 {['data', 'ocorrencias'].includes(editing.rule.modo_termino) && <label className={labelClass}>{editing.rule.modo_termino === 'data' ? 'Data final' : 'Quantidade'}<input required type={editing.rule.modo_termino === 'data' ? 'date' : 'number'} min={editing.rule.modo_termino === 'data' ? editing.rule.data_inicio : '1'} max={editing.rule.modo_termino === 'ocorrencias' ? '1200' : undefined} className={fieldClass} value={editing.rule.valor_termino ?? ''} onChange={e => setEditing(state => state?.rule ? ({ ...state, rule: { ...state.rule, valor_termino: e.target.value } }) : state)} /></label>}
               </>}
               {editing.tipo === 'saida' && <label className="text-sm text-text"><input type="checkbox" checked={editing.incluido_diario} onChange={e => setEditing(s => s && ({ ...s, incluido_diario: e.target.checked }))} /> Incluída no total do Diário</label>}
@@ -299,6 +303,7 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
           </div>
         </ModalPortal>
       )}
+      {confirmation}
     </>
   )
 }

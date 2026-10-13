@@ -16,7 +16,7 @@ const input: ProjectionInput = { settings: { saldo_abertura: 5000, data_ancora: 
 function snapshot(i = input): ProjectionResult { return { ...runProjection(i), inputSnapshot: i, editorData: { dailyBudgets: i.dailyBudgets, recurringRules: i.recurringRules } } }
 let observed: ProjectionResult, root: ReturnType<typeof createRoot>, host: HTMLDivElement
 function Calendar() { const projection = useProjection(); useEffect(() => { observed = projection }, [projection]); return <><InlineDailyActual day={projection.months[0].days[1]} /><InlineDailyActual day={projection.months[0].days[2]} /></> }
-beforeEach(() => { vi.clearAllMocks(); window.confirm = vi.fn(() => true); host = document.createElement('div'); document.body.append(host); root = createRoot(host) })
+beforeEach(() => { vi.clearAllMocks();  host = document.createElement('div'); document.body.append(host); root = createRoot(host) })
 afterEach(async () => { await act(() => root.unmount()); host.remove() })
 async function render(child: React.ReactNode, p = snapshot()) { await act(() => root.render(<ProjectionProvider projection={p}>{child}</ProjectionProvider>)) }
 async function click(label: string) { await act(() => { [...document.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === label || b.title === label || b.textContent === label)!.click() }) }
@@ -47,10 +47,10 @@ it('budget add/edit/delete return confirmed database rows, update global forecas
  await enter('input[placeholder^="O que"]', 'Lazer'); await enter('input[placeholder="Valor mensal (R$)"]', '200')
  await act(() => document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
  expect(observed.months).toEqual(runProjection({ ...input, dailyBudgets: [budget, added] }).months)
- await click('Editar'); await enter('input[aria-label="Nome do orçamento"]', 'Comida'); await enter('input[aria-label="Valor mensal"]', '400'); await click('Salvar')
+ await click('Editar'); await enter('input[aria-label="Nome do orçamento"]', 'Comida'); await enter('input[aria-label="Valor mensal"]', '400'); await click('Salvar'); expect(m.update).not.toHaveBeenCalled(); await click('Confirmar')
  const edited = { ...budget, descricao: 'Comida', valor_mensal: 400 }
  expect(observed.months).toEqual(runProjection({ ...input, dailyBudgets: [edited, added] }).months)
- await click('Excluir'); expect(observed.months).toEqual(runProjection({ ...input, dailyBudgets: [added] }).months)
+ await click('Excluir'); expect(m.del).not.toHaveBeenCalled(); await click('Confirmar'); expect(observed.months).toEqual(runProjection({ ...input, dailyBudgets: [added] }).months)
  expect(m.refresh).not.toHaveBeenCalled(); expect(m.read).not.toHaveBeenCalled()
 })
 it('a new authenticated server snapshot replaces local state without retaining the previous account data', async () => {

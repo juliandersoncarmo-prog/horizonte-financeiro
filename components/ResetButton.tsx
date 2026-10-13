@@ -1,25 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ModalPortal from './ModalPortal'
 import { resetAllData } from '@/app/actions'
 
 export default function ResetButton() {
   const router = useRouter()
+  const lock = useRef(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState<string | null>(null)
 
   async function handleReset() {
-    setLoading(true)
-    setError(null)
-    const result = await resetAllData()
-    setLoading(false)
-    if (result.success) {
-      router.push('/')
-    } else {
-      setError(result.error ?? 'Erro ao resetar')
-    }
+    if (lock.current) return
+    lock.current = true; setLoading(true); setError(null)
+    try {
+      const result = await resetAllData()
+      if (result.success) { setShowConfirm(false); router.push('/') }
+      else setError(result.error ?? 'Erro ao resetar')
+    } catch { setError('Falha de comunicação. Tente novamente.') }
+    finally { lock.current = false; setLoading(false) }
   }
 
   return (
@@ -32,15 +33,14 @@ export default function ResetButton() {
       </button>
 
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => !loading && setShowConfirm(false)} />
-          <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-w-md mx-4 p-6">
+        <ModalPortal label="Confirmar limpeza dos dados" onClose={() => { if (!lock.current) setShowConfirm(false) }}>
+          <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full max-w-md p-6">
             <h2 className="text-base font-semibold text-text mb-3">Tem certeza?</h2>
             <p className="text-sm text-text-2 mb-6">
               Isso apagará <strong>TODOS</strong> os seus dados: transações, regras recorrentes,
               orçamentos, realizações do Diário, cartões/faturas habilitados e saldo inicial. O sistema voltará ao estado inicial.
             </p>
-            {error && <p className="text-xs text-red mb-4">{error}</p>}
+            {error && <p role="alert" className="text-xs text-red mb-4">{error}</p>}
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
@@ -58,7 +58,7 @@ export default function ResetButton() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </>
   )

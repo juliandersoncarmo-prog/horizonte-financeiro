@@ -26,8 +26,8 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
     { label: summary.resultado > 0 ? 'Sobrou no mês' : summary.resultado < 0 ? 'Faltou no mês' : 'Resultado do mês', value: summary.resultado, Icon: TrendingUp, color: summaryColor(summary.resultado) },
   ] : []
   return <ModalPortal label="Resumo Mensal" onClose={onClose}>
-    <div {...swipe} ref={dialog} tabIndex={-1} className="mobile-swipe-area summary-panel relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
-      <div className="flex items-center justify-between mb-4"><h2 id="summary-title" className="text-lg font-semibold">Resumo Mensal</h2><button aria-label="Fechar resumo mensal" onClick={onClose}><X /></button></div>
+    <div {...swipe} ref={dialog} tabIndex={-1} className="mobile-swipe-area summary-panel relative w-full max-w-lg rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
+      <div className="dialog-heading flex items-center justify-between mb-4"><h2 id="summary-title" className="text-lg font-semibold">Resumo Mensal</h2><button aria-label="Fechar resumo mensal" onClick={onClose}><X /></button></div>
       {month && summary ? <>
         <div className="flex items-center justify-between gap-2 mb-3">
           <button aria-label="Mês anterior" disabled={index <= 0} className="p-2 rounded-xl hover:bg-surface-2 disabled:opacity-30" onClick={() => setSelected(months[index - 1].label)}><ChevronLeft /></button>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useOptionalProjection, useProjectionUpdate } from './ProjectionProvider'
 import ModalPortal from './ModalPortal'
+import useConfirmation from './useConfirmation'
 import { X, Pencil, Trash2, Check } from 'lucide-react'
 import { getAllDailyBudgets, addDailyBudget, deleteDailyBudget, updateDailyBudget } from '@/app/actions'
 
@@ -21,6 +22,7 @@ interface Props {
 
 export default function DiarioModal({ onClose }: Props) {
   const router = useRouter()
+  const { ask, confirmation } = useConfirmation()
   const updateProjection = useProjectionUpdate()
   const snapshot = useOptionalProjection()?.editorData?.dailyBudgets
   const lock = useRef(false)
@@ -78,7 +80,7 @@ export default function DiarioModal({ onClose }: Props) {
     })
   }
   async function handleDelete(id: string) {
-    if (lock.current || !window.confirm('Excluir este orçamento mensal? Os valores realizados do Diário permanecem. A previsão e os saldos serão recalculados.')) return
+    if (lock.current || !await ask('Excluir este orçamento mensal? Os valores realizados do Diário permanecem. A previsão e os saldos serão recalculados.')) return
     await change(() => deleteDailyBudget(id), () => {
       setItems(items => items.filter(item => item.id !== id))
       return updateProjection?.(input => ({ ...input, dailyBudgets: input.dailyBudgets.filter(item => item.id !== id) }))
@@ -86,7 +88,7 @@ export default function DiarioModal({ onClose }: Props) {
   }
   async function handleSaveEdit(id: string) {
     if (!editValor || !editDescricao.trim()) return
-    if (!window.confirm("Salvar nome e valor mensal? As previsões globais serão recalculadas; os registros realizados permanecem.")) return
+    if (!await ask("Salvar nome e valor mensal? As previsões globais serão recalculadas; os registros realizados permanecem.")) return
     await change(() => updateDailyBudget(id, Number(editValor), editDescricao), result => {
       const budget = result.budget
       setItems(items => items.map(item => item.id === id ? budget ?? { ...item, descricao: editDescricao.trim(), valor_mensal: Number(editValor) } : item)); setEditingId(null)
@@ -120,7 +122,7 @@ export default function DiarioModal({ onClose }: Props) {
         </div>
 
         {/* Lista + formulário (scroll) */}
-        <div className="flex-1 overflow-y-auto px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6">
 
           {notice && <p role="status" className="text-sm text-green">{notice}</p>}
           {saving && <p role="status" className="text-xs text-text-3">Salvando…</p>}
@@ -133,7 +135,7 @@ export default function DiarioModal({ onClose }: Props) {
             <div className="flex flex-col gap-1.5 pb-2">
               {items.map(item => (
                 <div key={item.id} className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
-                  {editingId !== item.id && <span className="flex-1 text-sm text-text truncate min-w-0">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : ""}</span>}
+                  {editingId !== item.id && <span className="flex-1 text-sm text-text min-w-0 break-words">{item.descricao}{item.mes_referencia ? ` (${item.mes_referencia})` : ""}</span>}
 
                   {editingId === item.id ? (
                     <>
@@ -246,6 +248,7 @@ export default function DiarioModal({ onClose }: Props) {
           </button>
         </div>
       </div>
+      {confirmation}
     </ModalPortal>
   )
 }

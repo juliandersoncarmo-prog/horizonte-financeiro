@@ -245,3 +245,82 @@ body {
   .ledger-months .month-day-row .day-balance .num { font-size: 14px; }
   .day-mid-value > span { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* Shared application choices and viewport dialogs, also usable by keyboard. */
+.choice-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.choice-trigger > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.choice-trigger > svg { flex-shrink: 0; }
+.choice-trigger:focus-visible, .choice-options button:focus-visible,
+.month-picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.choice-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 64px); }
+.dialog-heading { position: sticky; top: 0; z-index: 5; background: var(--surface); }
+.choice-panel .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-heading button { flex-shrink: 0; min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+.choice-options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px; }
+.choice-options button { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 9px; text-align: left; }
+.choice-options button[aria-pressed="true"], .month-picker-grid button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.month-field { width: 100%; min-height: 40px; border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; background: var(--surface-2); color: var(--text); text-align: left; }
+.card-first-month { width: min(100%, 18rem); }
+.month-picker-year { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 12px 0; }
+.month-picker-year button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; }
+.month-picker-year label { text-align: center; font-size: 13px; }
+.month-picker-year input { display: block; width: 96px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; text-align: center; background: var(--surface-2); }
+.month-picker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.month-picker-grid button { min-height: 44px; padding: 8px 2px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.month-picker button:disabled { opacity: .4; }
+.event-actions { display: inline-flex; flex-shrink: 0; gap: 0; }
+.event-description { overflow-wrap: anywhere; }
+.cards-heading, .summary-panel > .dialog-heading { margin-top: -5px; padding-top: 5px; padding-bottom: 8px; }
+@media (min-width: 640px) { .choice-trigger.mobile-month-select { display: none; } }
+
+/* Session 19: explicit tracks shared by header and rows; no mode-specific offsets. */
+@media (max-width: 639px) {
+  .ledger-months .month-table-heading, .ledger-months .month-day-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+    padding-left: 8px; padding-right: 8px; gap: 6px;
+  }
+  .month-day-row > div:nth-child(2) > span,
+  .ledger-months .month-day-row .day-mid-value > span.num {
+    display: block; text-align: center; padding: 0; max-width: 100%;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .month-table-heading > div { min-width: 0; }
+  .column-mode-trigger { display: flex; gap: 4px; padding: 0; }
+  .column-mode-trigger::before { content: none; }
+  .column-mode-trigger svg { width: 12px; }
+  .month-day-row .daily-display { position: relative; display: flex; justify-content: center; min-height: 46px; padding-bottom: 14px; }
+  .month-day-row .daily-display > span { display: block; width: 100%; text-align: center; }
+  .month-day-row .daily-display > button { position: absolute; right: 0; bottom: -3px; width: 24px; min-height: 24px; }
+  .month-day-row .day-balance .num { padding: 5px 4px; }
+  .choice-trigger.mobile-month-select { display: flex; justify-content: center; font-size: 17px; padding: 0 8px; }
+  .ledger-controls .choice-trigger.mobile-month-select { font-size: 17px; }
+  .mobile-month-select > svg { display: none; }
+  .choice-trigger.desktop-column-mode { display: none; }
+  .event-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 0 4px; padding: 8px 10px; }
+  .event-row > .event-description { width: auto; grid-column: 1; grid-row: 1; }
+  .event-row > .event-trailing { display: contents; margin: 0; }
+  .event-trailing > .num { grid-column: 1; grid-row: 2; justify-self: start; white-space: normal; overflow-wrap: anywhere; }
+  .event-actions { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+  .event-action { min-width: 40px; min-height: 44px; }
+  .card-month-fields { flex-direction: column; gap: 10px; }
+  .card-first-month { width: 100%; }
+  .invoice-values { width: 100%; }
+  .invoice-value-row { grid-template-columns: minmax(0, 1fr) minmax(80px, 100px); font-size: 14px; gap: 8px; }
+  .invoice-value-row > span { overflow-wrap: anywhere; }
+  .cards-panel, .summary-panel { max-height: none; overflow: visible; }
+  .cards-heading, .summary-panel > .dialog-heading { margin-top: -16px; padding-top: 12px; }
+  .day-detail-panel > .dialog-heading > div { min-width: 0; overflow-wrap: anywhere; }
+  [role="dialog"] { overscroll-behavior: contain; }
+}
+@media (max-width: 359px) {
+  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 4px; }
+  .ledger-months .month-day-row .day-mid-value > span.num,
+  .ledger-months .month-day-row .daily-display > span.num,
+  .ledger-months .month-day-row .day-balance .num { font-size: 12px; }
+  .column-mode-trigger { font-size: 12px; gap: 2px; }
+}
+@media (max-width: 639px) {
+  .mobile-drawer > button:first-child { position: sticky; top: 0; z-index: 5; background: var(--surface); }
+  .settings-page input { font-size: 16px; min-height: 44px; min-width: 0; max-width: 100%; }
+  .settings-page button { min-height: 44px; }
+}

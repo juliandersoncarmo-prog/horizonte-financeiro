@@ -85,7 +85,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
       <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="dialog-heading flex items-center justify-between mb-5">
           <h2 className={`text-base font-semibold ${titleColor}`}>
             {isEntrada ? '+ Nova entrada' : '+ Nova saída'}
           </h2>
@@ -243,7 +243,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
             <div className="flex gap-3 pt-1">
               <button
                 type="button"
-                onClick={onClose}
+                disabled={loading} onClick={onClose}
                 className="flex-1 border border-border rounded-xl py-2 text-sm text-text-2 hover:bg-surface-2 transition-colors"
               >
                 Cancelar

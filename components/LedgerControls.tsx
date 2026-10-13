@@ -1,5 +1,7 @@
 'use client'
 
+import ChoiceField from './ChoiceField'
+
 import { useEffect, useMemo } from 'react'
 import { monthLabel } from '@/lib/engine/projection'
 import type { MonthResult } from '@/types'
@@ -48,16 +50,7 @@ export default function LedgerControls({ months, startIndex, visible, onStartCha
 
   return (
     <div className="ledger-controls flex items-center gap-3 px-6 py-2.5 border-b border-border bg-surface flex-none">
-      <select
-        aria-label="Ano da projeção"
-        value={currentYear}
-        onChange={e => jumpToYear(Number(e.target.value))}
-        className="ledger-year text-sm border border-border rounded-xl px-3 py-1.5 bg-surface text-text focus:outline-none focus:border-accent cursor-pointer"
-      >
-        {yearRange.map(year => (
-          <option key={year} value={year}>{year}</option>
-        ))}
-      </select>
+      <ChoiceField label="Ano da projeção" value={String(currentYear)} onChange={value => jumpToYear(Number(value))} options={yearRange.map(year => ({value: String(year), label: String(year)}))} className="ledger-year text-sm border border-border rounded-xl px-3 py-1.5 bg-surface text-text" />
 
       <div className="month-navigation flex items-center gap-1">
         <button
@@ -66,9 +59,7 @@ export default function LedgerControls({ months, startIndex, visible, onStartCha
           disabled={atFirst}
           className={`${btnBase} w-8 h-8 text-base`}
         >‹</button>
-        <select className="mobile-month-select" aria-label="Mês exibido" value={startIndex} onChange={event => onStartChange(Number(event.target.value))}>
-          {months.map((month, index) => <option key={month.label} value={index}>{monthLabel(month.year, month.month)}</option>)}
-        </select>
+        <ChoiceField className="mobile-month-select" label="Mês exibido" value={String(startIndex)} onChange={value => onStartChange(Number(value))} options={months.map((month,index) => ({value: String(index),label: monthLabel(month.year,month.month)}))} />
         <button
           aria-label="Próximo mês"
           onClick={() => onStartChange(startIndex + 1)}

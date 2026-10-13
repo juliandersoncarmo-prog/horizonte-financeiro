@@ -40,5 +40,5 @@ it('central plus presents both real entry actions and closes picker before openi
 })
 const projection=runProjection({settings:{saldo_abertura:1000,data_ancora:'2026-10-01'},horizonMonths:5,recurringRules:[],transactions:[],dailyBudgets:[]})
 it.each([320,375,390,430,768,1280])('preserves month count at %s px (DOM only)',async width=>{
- Object.defineProperty(window,'innerWidth',{value:width,configurable:true});await render(<ProjectionProvider projection={projection}><LedgerView projection={projection}/></ProjectionProvider>);expect(host.querySelectorAll('.month-card')).toHaveLength(width>=1024?4:width>=640?2:1);expect(host.querySelector('.mobile-month-select option')?.textContent).toBe('Outubro de 2026')
+ Object.defineProperty(window,'innerWidth',{value:width,configurable:true});await render(<ProjectionProvider projection={projection}><LedgerView projection={projection}/></ProjectionProvider>);expect(host.querySelectorAll('.month-card')).toHaveLength(width>=1024?4:width>=640?2:1);expect(host.querySelector('.mobile-month-select > span')?.textContent).toBe('Outubro de 2026')
 })

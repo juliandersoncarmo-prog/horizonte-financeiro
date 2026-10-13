@@ -21,7 +21,7 @@ export default function ModalPortal({ children, onClose, label }: {
     document.body.style.overflow = 'hidden'
     document.body.appendChild(container)
     const focusable = () => [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? [])].filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true')
-    ;(focusable()[0] ?? panel.current)?.focus()
+    ;(panel.current?.querySelector<HTMLElement>('[data-hf-initial-focus="true"]') ?? focusable()[0] ?? panel.current)?.focus()
     function keydown(event: KeyboardEvent) {
       if ([...document.querySelectorAll('[data-hf-modal]')].at(-1) !== container) return
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); return }
