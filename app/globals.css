@@ -351,10 +351,21 @@ body {
   .card-first-month .month-field { font-size: 14px; padding-left: 8px; padding-right: 8px; gap: 6px; }
 }
 
-/* Mobile ledger: symmetric outer tracks keep the middle on the table axis.
-   Equal icon slots keep the amount centered, with the pencil in the same row.
-   Long amounts scale to their own cell rather than wrapping or clipping. */
+/* Approved Alternative 2: full content width independently of inner tracks.
+   Amount + pencil stay compact, with a restrained 2px rightward bias.
+   Long amounts scale within their cell, preserving the complete string. */
 @media (max-width: 639px) {
+  .ledger-months {
+    box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%;
+    align-self: stretch; padding-left: 16px; padding-right: 16px;
+  }
+  .ledger-months > .month-card {
+    box-sizing: border-box; flex: 0 0 100%; width: 100%; min-width: 0; max-width: 100%;
+    margin-left: 0; margin-right: 0;
+  }
+  .ledger-months .month-scroll,
+  .ledger-months .month-table-heading,
+  .ledger-months .month-day-row { box-sizing: border-box; width: 100%; min-width: 0; }
   .ledger-months .month-table-heading,
   .ledger-months .month-day-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 1fr);
@@ -363,7 +374,7 @@ body {
   .ledger-months .month-table-heading { min-height: 40px; padding-top: 0; padding-bottom: 0; }
   .ledger-months .month-table-heading > span { font-size: 13px; }
   .ledger-months .month-table-heading > span:last-child { padding-right: 0; }
-  .ledger-months .column-mode-trigger { min-height: 40px; font-size: 13px; gap: 4px; flex-wrap: nowrap; }
+  .ledger-months .column-mode-trigger { min-height: 40px; font-size: 13px; gap: 4px; flex-wrap: nowrap; padding-left: 4px; padding-right: 0; }
   .ledger-months .column-mode-trigger > span { white-space: nowrap; }
   .ledger-months .column-mode-trigger > svg { flex-shrink: 0; }
   .ledger-months .month-day-row {
@@ -371,31 +382,30 @@ body {
   }
   .ledger-months .month-day-row > button { min-width: 0; gap: 4px; }
   .ledger-months .month-day-row > button .num { font-size: 15px; font-weight: 600; }
-  .ledger-months .month-day-row > button > span:last-child { font-size: 13px; margin-left: 0; color: var(--text-2); }
+  .ledger-months .month-day-row > button > span:last-child { font-size: 12px; margin-left: 0; color: var(--text-2); }
   .ledger-months .day-mid-value,
   .ledger-months .day-balance { container-type: inline-size; min-width: 0; }
   .ledger-months .month-day-row .day-mid-value > span.num {
-    width: 100%; padding: 0 18px; text-align: center;
-    font-size: min(16px, calc((100cqw - 36px) * var(--money-scale)));
+    width: 100%; padding: 0 0 0 4px; text-align: center; font-weight: 600;
+    font-size: min(16px, calc((100cqw - 4px) * var(--money-scale)));
     line-height: 20px; white-space: nowrap; overflow-wrap: normal;
   }
   .ledger-months .month-day-row .daily-display {
-    display: grid; grid-template-columns: 18px minmax(0, 1fr) 18px;
-    grid-template-rows: 32px; align-items: center; gap: 0;
-    height: 32px; min-height: 32px; padding: 0; flex-wrap: nowrap;
+    display: flex; justify-content: center; align-items: center; gap: 5px;
+    width: 100%; height: 32px; min-height: 32px; padding: 0 0 0 4px; flex-wrap: nowrap;
   }
   .ledger-months .month-day-row .daily-display > span.num {
-    grid-column: 2; grid-row: 1; width: 100%; padding: 0;
-    font-size: min(16px, calc((100cqw - 36px) * var(--money-scale)));
+    flex: 0 1 auto; width: auto; min-width: 0; max-width: calc(100% - 17px); padding: 0; font-weight: 600;
+    font-size: min(16px, calc((100cqw - 21px) * var(--money-scale)));
     line-height: 20px; white-space: nowrap; overflow-wrap: normal; text-align: center;
   }
   .ledger-months .month-day-row .daily-display > button {
-    position: static; grid-column: 3; grid-row: 1; justify-self: stretch;
-    width: 18px; height: 32px; min-height: 32px; padding: 0;
+    position: static; flex: 0 0 12px;
+    width: 12px; height: 32px; min-height: 32px; padding: 0;
   }
   .ledger-months .month-day-row .day-balance > span.num {
     max-width: 100%; padding: 4px 3px; white-space: nowrap; overflow-wrap: normal;
-    font-size: min(15px, calc((100cqw - 6px) * var(--money-scale))); line-height: 20px;
+    font-size: min(14px, calc((100cqw - 6px) * var(--money-scale))); line-height: 20px;
   }
   .ledger-months .month-day-row form { flex-wrap: nowrap; height: 32px; gap: 0; }
   .ledger-months .month-day-row input { flex-basis: auto; min-width: 0; height: 32px; }
