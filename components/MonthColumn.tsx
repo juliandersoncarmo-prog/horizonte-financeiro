@@ -2,6 +2,7 @@
 
 import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
 import InlineDailyActual from './InlineDailyActual'
+import MobileColumnMode from './MobileColumnMode'
 import type { MonthResult, DayResult } from '@/types'
 import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
 
@@ -67,12 +68,13 @@ export default function MonthColumn({
             aria-label={`Valores exibidos em ${monthLabel(month.year, month.month)}`}
             value={mode}
             onChange={e => onModeChange(e.target.value as Mode)}
-            className="text-xs font-semibold text-text-3 bg-transparent border-none focus:outline-none cursor-pointer uppercase tracking-wide"
+            className="desktop-column-mode text-xs font-semibold text-text-3 bg-transparent border-none focus:outline-none cursor-pointer uppercase tracking-wide"
           >
             <option value="entrada">Entradas</option>
             <option value="saida">Saídas</option>
             <option value="diario">Diário</option>
           </select>
+          <MobileColumnMode mode={mode} onChange={onModeChange} month={monthLabel(month.year, month.month)} />
         </div>
         <span className="text-right text-xs font-semibold text-text-3 uppercase tracking-wide">Saldo</span>
       </div>

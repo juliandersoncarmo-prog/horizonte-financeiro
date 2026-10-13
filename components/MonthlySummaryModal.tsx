@@ -37,12 +37,12 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
             <dd className={`text-lg sm:text-xl font-bold num break-words mt-1 ${color}`}>{formatBRL(value)}</dd>
           </div>)}
         </dl>
-        <div className="rounded-2xl border border-accent/20 bg-accent-soft p-4 mt-3">
+        <div className="summary-closing rounded-2xl border border-accent/20 bg-accent-soft p-4 mt-3">
           <div className="flex gap-2 items-center text-accent mb-2"><Landmark aria-hidden="true" size={18} /><p className="text-sm font-medium">Saldo previsto para o fim do mês</p></div>
           <p className={`text-3xl font-bold num break-words ${summaryColor(month.saldoFechamento)}`}>{formatBRL(month.saldoFechamento)}</p>
           <p className="text-xs text-text-2 mt-2">Inclui o saldo de abertura e o resultado mensal.</p>
         </div>
-        <div className="flex items-start gap-2.5 mt-4 text-text-2"><CreditCard aria-hidden="true" size={16} className="shrink-0 mt-0.5" /><div className="flex-1 text-xs"><p>Faturas de cartões <strong className="text-text float-right ml-2 num">{formatBRL(summary.cartoes)}</strong></p><p className="mt-1">Este valor já está incluído nas Saídas.</p></div></div>
+        <div className="summary-cards-note flex items-start gap-2.5 mt-4 text-text-2"><CreditCard aria-hidden="true" size={16} className="shrink-0 mt-0.5" /><div className="flex-1 text-xs"><p>Faturas de cartões <strong className="text-text float-right ml-2 num">{formatBRL(summary.cartoes)}</strong></p><p className="mt-1">Este valor já está incluído nas Saídas.</p></div></div>
         <p className="text-xs text-text-2 mt-3">Navegação limitada ao período da projeção do calendário.</p>
       </> : <p role="status">Nenhum mês disponível na projeção.</p>}
     </div>

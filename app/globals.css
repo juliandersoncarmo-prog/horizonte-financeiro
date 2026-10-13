@@ -108,6 +108,7 @@ body {
 .month-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
 /* Mobile shell uses the available viewport, with a closed navigation drawer. */
+.mobile-column-mode { display: none; }
 .mobile-header, .mobile-bottom-nav, .mobile-month-select, .mobile-card-icon, .mobile-card-due { display: none; }
 @media (max-width: 639px) {
   .app-shell { flex-direction: column; height: 100dvh; min-width: 0; background: var(--surface); padding-top: env(safe-area-inset-top); padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
@@ -187,11 +188,16 @@ body {
   .auth-screen { height: 100dvh; min-height: 0; overflow-y: auto; padding: 12px; }
   .auth-screen input { font-size: 16px; }
   .summary-panel, .cards-panel { padding: 16px; }
-  .summary-metrics { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; gap: 0; overflow: hidden; }
-  .summary-metrics > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-radius: 0; background: var(--surface); }
-  .summary-metrics svg { display: none; }
-  .summary-metrics dt { min-height: 0; }
-  .summary-metrics dd { font-size: 14px; margin: 0; text-align: right; }
+  .summary-panel { padding: 18px; border-radius: 20px; }
+  [role="dialog"] .summary-metrics { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .summary-metrics > div { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+  .summary-metrics svg { display: block; grid-row: 1 / 3; align-self: center; width: 36px; height: 36px; padding: 9px; border-radius: 11px; background: var(--surface); margin: 0; opacity: 1; }
+  .summary-metrics dt { min-height: 0; font-size: 12px; line-height: 1.4; }
+  .summary-metrics dd { font-size: 22px; line-height: 1.25; margin: 4px 0 0; text-align: left; overflow-wrap: anywhere; }
+  .summary-closing { padding: 16px; border-radius: 16px; }
+  .summary-closing > p.num { font-size: clamp(24px, 7vw, 30px); }
+  .summary-cards-note { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .summary-cards-note strong { float: none; display: block; margin: 4px 0 0; font-size: 16px; }
   .card-picker { display: flex; flex-direction: column; }
   .card-picker > button:not(:last-child) { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px; background: var(--surface); }
   .mobile-card-icon { display: block; color: var(--accent); }
@@ -199,4 +205,30 @@ body {
   .card-picker > button:last-child { align-self: flex-end; }
   .cards-panel fieldset[data-form-open="false"] { display: none; }
 
+}
+
+/* Session 16: retain the established mobile structure and desktop layout. */
+@media (max-width: 639px) {
+  .mobile-header, .ledger-controls, .ledger-kpis, .ledger-months { padding-left: 16px; padding-right: 16px; }
+  .ledger-controls { gap: 8px; }
+  .ledger-kpis { gap: 10px; padding-bottom: 14px; }
+  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: 54px minmax(0, 1fr) minmax(96px, 1.08fr); padding-left: 10px; padding-right: 10px; gap: 4px; }
+  .month-table-heading { min-height: 46px; }
+  .month-table-heading > span:last-child { padding-right: 6px; }
+  .month-table-heading .desktop-column-mode { display: none; }
+  .mobile-column-mode { display: block; position: relative; min-width: 0; max-width: 100%; }
+  .column-mode-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 0 3px; color: var(--text-2); font-size: 13px; font-weight: 600; border-radius: 8px; }
+  .column-mode-trigger svg { flex-shrink: 0; transition: transform .15s; }
+  .column-mode-trigger[aria-expanded="true"] { color: var(--accent); }
+  .column-mode-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .column-mode-trigger:focus-visible, .column-mode-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .column-mode-menu { position: absolute; z-index: 30; top: 100%; left: 50%; transform: translateX(-50%); width: 140px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px #10204020; }
+  .column-mode-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 10px; border-radius: 8px; color: var(--text); font-size: 13px; text-align: left; }
+  .column-mode-menu button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .month-day-row .daily-display { display: grid; grid-template-columns: minmax(0, 1fr) 26px; gap: 2px; align-items: center; }
+  .month-day-row .daily-display > span { text-align: right; min-width: 0; }
+  .month-day-row .daily-display > button { width: 26px; min-height: 36px; justify-self: end; }
+  .month-day-row > div:nth-child(2) > span { display: block; text-align: right; padding-right: 28px; white-space: normal; overflow-wrap: anywhere; }
+  .month-day-row { min-height: 44px; }
+  .month-heading h2 > span { right: 4px; top: 15px; pointer-events: none; }
 }
