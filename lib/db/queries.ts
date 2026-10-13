@@ -86,3 +86,10 @@ export async function getDailyActuals(userId: string) {
   if (error) throw new Error('Não foi possível carregar o Diário. Verifique a migração no ambiente de testes.')
   return (data ?? []).map(a => ({ data: String(a.data), valor: Number(a.valor) }))
 }
+
+export async function getRecurringExceptions(userId: string) {
+  const db = await createUserDataClient()
+  const { data, error } = await db.from('recurring_exceptions').select('rule_id,mes_referencia').eq('user_id', userId)
+  if (error) throw new Error('Não foi possível carregar os cancelamentos de recorrências.')
+  return data ?? []
+}

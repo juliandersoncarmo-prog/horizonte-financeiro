@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "id": "b0f1c970-a3bf-4b6f-ab1f-b42e897f4833",
+      "tipo": "entrada",
+      "ativo": true,
+      "valor": 1200,
+      "user_id": "42b28b5b-3f7e-4d26-82fc-50f86f1028df",
+      "categoria": "",
+      "descricao": "HF persistence fixture",
+      "created_at": "2026-10-13T18:53:56.370022+00:00",
+      "dia_do_mes": 5,
+      "frequencia": "mensal",
+      "updated_at": "2026-10-13T18:53:56.370022+00:00",
+      "data_inicio": "2099-10-01",
+      "modo_termino": "nunca",
+      "valor_termino": null,
+      "incluido_diario": false
+    }
+  ],
+  "exceptions": [
+    {
+      "rule_id": "b0f1c970-a3bf-4b6f-ab1f-b42e897f4833",
+      "user_id": "42b28b5b-3f7e-4d26-82fc-50f86f1028df",
+      "created_at": "2026-10-13T18:53:56.370022+00:00",
+      "mes_referencia": "2099-11"
+    }
+  ]
+}

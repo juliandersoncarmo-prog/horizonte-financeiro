@@ -11,7 +11,7 @@ beforeEach(() => {
   const chain: Record<string, unknown> = { then: (resolve: (result: unknown) => void) => resolve(mock.result) }
   for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'order']) chain[method] = (...args: unknown[]) => { mock.calls.push([method, ...args]); return chain }
   mock.from.mockImplementation(table => { mock.calls.push(['from', table]); return chain })
-  mock.rpc.mockResolvedValue({ error: null })
+  mock.rpc.mockResolvedValue({ data: id, error: null })
   mock.db.mockResolvedValue({ auth: { getUser: mock.auth }, from: mock.from, rpc: mock.rpc })
 })
 it('criação usa RPC atômica sem receber proprietário do formulário', async () => {
@@ -78,4 +78,14 @@ it('consulta filtra proprietário, converte valores e ordena meses', async () =>
 })
 it('ids inválidos rejeitados antes do banco', async () => {
   expect((await deleteCreditCard('bad')).success).toBe(false); expect((await saveCardInvoice(id, 'bad', '2026-02', 2)).success).toBe(false); expect(mock.db).not.toHaveBeenCalled()
+})
+
+it('sends the stable request UUID to the idempotent RPC', async()=> {
+ expect((await createCreditCard({...input,requestId:id})).success).toBe(true)
+ expect(mock.rpc).toHaveBeenCalledWith('create_credit_card_once', {p_nome:'Cartão',p_dia:31,p_faturas:input.invoices,p_request_id:id})
+})
+
+it('an unconfirmed RPC result is uncertain rather than a confirmed failed insert',async()=> {
+ mock.rpc.mockResolvedValue({data:null,error:null})
+ expect(await createCreditCard({...input,requestId:id})).toMatchObject({success:false,uncertain:true})
 })

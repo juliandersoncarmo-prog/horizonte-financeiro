@@ -9,7 +9,7 @@ import { useOptionalProjection } from './ProjectionProvider'
 import { deleteCardInvoice } from '@/app/card-actions'
 import type { RecurringRule, DayResult, DayEvent } from '@/types'
 import { balanceColor, formatBRL } from '@/lib/engine/projection'
-import { updateTransaction, updateRecurringRule, deleteTransaction, deleteRecurringRule } from '@/app/actions'
+import { updateTransaction, updateRecurringRule, deleteTransaction, deleteRecurringRule, cancelRecurringMonth } from '@/app/actions'
 import ModalPortal from './ModalPortal'
 import useConfirmation from './useConfirmation'
 import CreditCardsModal from './CreditCardsModal'
@@ -98,13 +98,13 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
   }
   async function handleSaveEdit(ev: React.FormEvent) { ev.preventDefault(); if (lock.current || refreshing) return; if (editing?.kind === 'rule' && !await ask('Salvar a regra inteira? Todas as ocorrências, inclusive passadas, serão recalculadas.')) return; await mutateEdit(false) }
 
-  async function removeEvent() {
+  async function removeEvent(scope: 'month' | 'all' = 'all') {
     const event = deletingEvent
     if (!event || lock.current) return
     lock.current = true; setSaving(true); setEditError(null)
     try {
       const result = event.invoiceId && event.cardId ? await deleteCardInvoice(event.cardId, event.invoiceId)
-        : event.id ? await deleteTransaction(event.id) : event.ruleId ? await deleteRecurringRule(event.ruleId, 'all-occurrences') : { success: false, error: 'Registro indisponível.' }
+        : event.id ? await deleteTransaction(event.id) : event.ruleId ? scope === 'month' ? await cancelRecurringMonth(event.ruleId, day.date) : await deleteRecurringRule(event.ruleId, 'all-occurrences') : { success: false, error: 'Registro indisponível.' }
       if (!result.success) { setEditError(result.error ?? 'Não foi possível excluir.'); return }
       setDeletingEvent(null); setNotice('Registro excluído com sucesso.'); startRefresh(() => router.refresh())
     } catch { setEditError('Falha de comunicação. Tente novamente.') }
@@ -212,9 +212,10 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
       {deletingEvent && <ModalPortal label="Confirmar exclusão" onClose={() => { if (!lock.current) setDeletingEvent(null) }}>
         <div className="bg-surface p-6 rounded-2xl space-y-4">
           <h2 className="font-semibold">Excluir {deletingEvent.descricao}?</h2>
-          <p className="text-sm">{deletingEvent.invoiceId ? 'Somente esta fatura será excluída. O cartão e as outras faturas permanecem.' : deletingEvent.ruleId ? 'A regra inteira será excluída, afetando todas as ocorrências, inclusive passadas. Saldos e Resumo Mensal serão recalculados.' : 'Somente este lançamento será excluído. Saldos e Resumo Mensal serão recalculados.'}</p>
+          <p className="text-sm">{deletingEvent.invoiceId ? 'Somente esta fatura será excluída. O cartão e as outras faturas permanecem.' : deletingEvent.ruleId ? `Escolha o alcance da exclusão. Somente este mês cancela as ocorrências de ${MONTHS[day.month]} de ${day.year}, inclusive em regras semanais ou quinzenais. Toda a recorrência remove todas as ocorrências, passadas e futuras. Saldos e Resumo Mensal serão recalculados.` : 'Somente este lançamento será excluído. Saldos e Resumo Mensal serão recalculados.'}</p>
           {editError && <p role="alert">{editError}</p>}
-          <button disabled={saving} onClick={() => void removeEvent()} className="bg-red text-white rounded-xl p-3">{saving ? 'Excluindo…' : 'Confirmar exclusão'}</button>
+          {deletingEvent.ruleId && <button disabled={saving} onClick={() => void removeEvent('month')} className="bg-accent text-white rounded-xl p-3">Somente este mês</button>}
+          <button disabled={saving} onClick={() => void removeEvent()} className="bg-red text-white rounded-xl p-3">{saving ? 'Excluindo…' : deletingEvent.ruleId ? 'Toda a recorrência' : 'Confirmar exclusão'}</button>
           <button disabled={saving} onClick={() => setDeletingEvent(null)} className="ml-3 p-3">Cancelar</button>
         </div>
       </ModalPortal>}
@@ -293,9 +294,9 @@ export default function DayDetail({ day, onClose, hasData }: DayDetailProps) {
                   {saving ? 'Salvando…' : 'Salvar'}
                 </button>
               </div>
-              <button type="button" disabled={saving} onClick={() => setConfirmDelete(true)} className="text-red text-sm border border-red rounded-xl py-2 disabled:opacity-50">{editing.kind === 'rule' ? 'Excluir regra recorrente' : 'Excluir lançamento'}</button>
+              <button type="button" disabled={saving} onClick={() => { if (editing.kind === 'rule') { setDeletingEvent({ ruleId: editing.id, descricao: editing.descricao, categoria: '', valor: Number(editing.valor), tipo: editing.tipo }); setEditing(null) } else setConfirmDelete(true) }} className="text-red text-sm border border-red rounded-xl py-2 disabled:opacity-50">{editing.kind === 'rule' ? 'Excluir regra recorrente' : 'Excluir lançamento'}</button>
               {confirmDelete && <div role="alert" className="text-sm bg-red-soft rounded-xl p-3 space-y-3">
-                <p>{editing.kind === 'rule' ? 'Excluir a regra inteira? Todas as ocorrências geradas por ela, passadas e futuras, desaparecerão da projeção e do Resumo Mensal. Lançamentos avulsos permanecem. Não há exclusão de uma ocorrência isolada.' : 'Excluir somente este lançamento? Os saldos e o Resumo Mensal serão recalculados.'}</p>
+                <p>{editing.kind === 'rule' ? 'Excluir a regra inteira? Todas as ocorrências geradas por ela, passadas e futuras, desaparecerão da projeção e do Resumo Mensal. Lançamentos avulsos permanecem. Os cancelamentos mensais são preservados nas edições da regra.' : 'Excluir somente este lançamento? Os saldos e o Resumo Mensal serão recalculados.'}</p>
                 <button type="button" disabled={saving} onClick={() => void mutateEdit(true)} className="bg-red text-white rounded-lg px-3 py-2 disabled:opacity-50">{saving ? 'Excluindo…' : 'Confirmar exclusão'}</button>
                 <button type="button" disabled={saving} onClick={() => setConfirmDelete(false)} className="ml-3">Cancelar exclusão</button>
               </div>}

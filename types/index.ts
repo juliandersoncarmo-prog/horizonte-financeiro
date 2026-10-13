@@ -87,7 +87,10 @@ export interface Transaction {
   data: string  // ISO date YYYY-MM-DD
 }
 
+export interface RecurringException { rule_id: string; mes_referencia: string }
+
 export interface ProjectionInput {
+  recurringExceptions?: RecurringException[]
   cards?: CreditCard[]
   settings: Settings
   recurringRules: RecurringRule[]

@@ -3,7 +3,7 @@
 import { getCreditCards } from './card-actions'
 import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
-import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals } from '@/lib/db/queries'
+import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals, getRecurringExceptions } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
 import { createUserDataClient } from '@/lib/supabase/service'
 import { runProjection, projectionHorizon } from '@/lib/engine/projection'
@@ -27,13 +27,14 @@ export async function getProjectionData(startDate: string, months: number = 4): 
   try {
     const userId = await getAuthenticatedUserId()
 
-    const [settings, rawRules, transactions, rawBudgets, dailyActuals, cardData] = await Promise.all([
+    const [settings, rawRules, transactions, rawBudgets, dailyActuals, cardData, recurringExceptions] = await Promise.all([
       getUserSettings(userId),
       getRecurringRules(userId),
       getTransactions(userId),
       getDailyBudgets(userId),
       getDailyActuals(userId),
       getCreditCards(),
+      getRecurringExceptions(userId),
     ])
 
 
@@ -74,7 +75,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    const inputSnapshot: ProjectionInput = { cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months), todayISO: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()) }
+    const inputSnapshot: ProjectionInput = { recurringExceptions, cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months), todayISO: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()) }
     const result = runProjection(inputSnapshot)
     return { ...result, inputSnapshot, cardData, editorData: { recurringRules, dailyBudgets } }
   } catch (err) {
@@ -412,3 +413,16 @@ export async function deleteRecurringRule(id: string, scope: 'all-occurrences') 
 }
 
 export async function getInitialSettings() { return getUserSettings(await getAuthenticatedUserId()) }
+
+export async function cancelRecurringMonth(id: string, date: string) {
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !validCivilDate(date))
+    return { success: false, error: 'Ocorrência inválida.' }
+  try {
+    const userId = await getAuthenticatedUserId()
+    const db = await createUserDataClient()
+    // Composite FK verifies the rule owner, even for a forged client request.
+    const { error } = await db.from('recurring_exceptions').upsert({ user_id: userId, rule_id: id, mes_referencia: date.slice(0,7) }, { onConflict: 'user_id,rule_id,mes_referencia', ignoreDuplicates: true })
+    if (error) return { success: false, error: 'Não foi possível cancelar este mês. Verifique se a regra ainda existe e pertence à sua conta.' }
+    return { success: true }
+  } catch { return { success: false, error: 'Não foi possível confirmar o cancelamento. Verifique sua sessão e recarregue.' } }
+}

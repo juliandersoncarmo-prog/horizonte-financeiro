@@ -20,7 +20,7 @@ vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
 let root: Root, host: HTMLDivElement
 const projection = runProjection({ ...fixture(), horizonMonths: 2 })
 const days = projection.months[0].days
-beforeEach(() => { vi.clearAllMocks(); mocks.save.mockResolvedValue({ success: true }); mocks.create.mockResolvedValue({ success: true }); mocks.get.mockResolvedValue({ cards: [], enabled: true }); host = document.createElement('div'); document.body.append(host); root = createRoot(host) })
+beforeEach(() => { sessionStorage.clear(); vi.clearAllMocks(); mocks.save.mockResolvedValue({ success: true }); mocks.create.mockResolvedValue({ success: true }); mocks.get.mockResolvedValue({ cards: [], enabled: true }); host = document.createElement('div'); document.body.append(host); root = createRoot(host) })
 afterEach(async () => { await act(() => root.unmount()); host.remove() })
 async function render(children: React.ReactNode) { await act(() => root.render(<ProjectionProvider projection={projection}>{children}</ProjectionProvider>)) }
 function button(label: string) { const found = [...document.body.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === label || b.textContent === label); if (!found) throw new Error(label); return found }
@@ -66,4 +66,26 @@ it('places exhausted status inside the existing month title and keeps excess in 
   expect(document.body.textContent).not.toContain('Desde')
   expect(month.days[2].saldo).toBe(month.days[1].saldo - 50)
   expect(month.days[3].diarioPrevisto).toBe(0)
+})
+
+it('refreshes cards after confirmed save even when opening from a projection snapshot', async()=> {
+ const seeded={...projection,cardData:{enabled:true,cards:[]}}
+ await act(()=>root.render(<ProjectionProvider projection={seeded}><CreditCardsModal onClose={vi.fn()} /></ProjectionProvider>))
+ const fields=document.body.querySelectorAll('input');await input(fields[0],'Banco');await input(fields[1],'15');await input(fields[2],'1')
+ await input(document.body.querySelector('input[aria-label^="Valor de"]')!,'10')
+ mocks.get.mockResolvedValue({enabled:true,cards:[{id:'new',nome:'Banco',dia_vencimento:15,invoices:[]}]})
+ await submit();await vi.waitFor(()=>expect(mocks.create).toHaveBeenCalled());await act(async()=>{})
+ expect(mocks.get).toHaveBeenCalledTimes(1);await click('Cadastrar outro');expect(document.body.textContent).toContain('Banco')
+})
+it('does not turn a confirmed save plus failed reload into a failed registration',async()=> {
+ await cardForm();mocks.get.mockRejectedValueOnce(new Error('Offline'));await submit();await vi.waitFor(()=>expect(mocks.create).toHaveBeenCalled());await act(async()=>{})
+ expect(document.body.textContent).toContain('Cartão cadastrado!');expect(document.body.textContent).toContain('Alteração salva, mas a lista')
+})
+it('blocks another creation after an ambiguous response until the list is reloaded',async()=> {
+ mocks.create.mockResolvedValue({success:false,uncertain:true,error:'Não foi possível confirmar o cadastro.'})
+ await cardForm();await submit();await vi.waitFor(()=>expect(mocks.create).toHaveBeenCalled());await act(async()=>{})
+ expect(button('+ Novo cartão').disabled).toBe(true);expect(document.querySelector('fieldset')!.disabled).toBe(true)
+ await click('Recarregar cartões');expect(button('+ Novo cartão').disabled).toBe(false)
+ const first=mocks.create.mock.calls[0][0].requestId;await submit();await vi.waitFor(()=>expect(mocks.create).toHaveBeenCalledTimes(2))
+ expect(mocks.create.mock.calls[1][0].requestId).toBe(first)
 })

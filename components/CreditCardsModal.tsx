@@ -8,6 +8,7 @@ import MonthField from './MonthField'
 import { useOptionalProjection } from './ProjectionProvider'
 import { X, CreditCard as CardIcon } from 'lucide-react'
 import { createCreditCard, deleteCreditCard, deleteCardInvoice, getCreditCards, saveCardInvoice, updateCreditCard } from '@/app/card-actions'
+import { cardCreationRequest } from '@/lib/card-request'
 import { invoiceDate, resizeInvoiceDraft, invoiceMonthLabel } from '@/lib/cards'
 import { formatBRL } from '@/lib/engine/projection'
 import type { CreditCard, CardInvoice } from '@/types'
@@ -22,6 +23,9 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   const seed = useOptionalProjection()?.cardData
   const [refreshing, startRefresh] = useTransition()
   const [notice, setNotice] = useState('')
+  const requestKey = useRef<string | null>(null)
+  const readSequence = useRef(0)
+  const [uncertain, setUncertain] = useState(false)
   const mutationLock = useRef(false)
   const dialog = useRef<HTMLDivElement>(null)
   const [cards, setCards] = useState<CreditCard[]>(seed?.cards ?? [])
@@ -43,12 +47,13 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
 
   useEffect(() => {
     let active = true
+    const sequence = ++readSequence.current
     ;(seed ? Promise.resolve(seed) : getCreditCards()).then(result => {
-      if (!active) return
+      if (!active || sequence !== readSequence.current) return
       setCards(result.cards); setEnabled(result.enabled); setLoading(false)
       const initial = result.cards.find(c => c.id === initialCardId)
       if (initial) { setNome(initial.nome); setDia(String(initial.dia_vencimento)) }
-    }).catch(() => { if (active) { setError('Não foi possível carregar os cartões. Tente novamente.'); setLoading(false) } })
+    }).catch(() => { if (active && sequence === readSequence.current) { setError('Não foi possível carregar os cartões. Tente novamente.'); setLoading(false) } })
     return () => { active = false }
   }, [initialCardId, seed])
 
@@ -56,24 +61,27 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   function choose(c?: CreditCard) {
     setFormOpen(true)
     setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(c ? String(c.dia_vencimento) : '')
+    requestKey.current = null; setUncertain(false)
     setCreated(false); setFirst(currentMonth()); setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
   }
-  async function run(action: () => Promise<{ success: boolean; error?: string }>, after?: () => void) {
+  async function run(action: () => Promise<{ success: boolean; error?: string; uncertain?: boolean }>, after?: () => void) {
     if (mutationLock.current || refreshing) return
     mutationLock.current = true
     setBusy(true); setError(''); setNotice('')
     try {
       const result = await action()
-      if (!result.success) { setError(result.error ?? 'Não foi possível salvar'); return }
+      if (!result.success) { if (result.uncertain) setUncertain(true); setError(result.error ?? 'Não foi possível salvar'); return }
       // Refresh the ledger even if the subsequent manager read fails.
       startRefresh(() => router.refresh())
       after?.()
       setNotice('Alteração salva com sucesso.')
-      if (!seed) try {
+      try {
+        const sequence = ++readSequence.current
         const resultCards = await getCreditCards()
+        if (sequence !== readSequence.current) return
         setCards(resultCards.cards); setEnabled(resultCards.enabled)
       } catch { setError('Alteração salva, mas a lista não pôde ser atualizada. Recarregue os cartões.') }
-    } catch { setError('Falha de comunicação. Recarregue os cartões antes de tentar novamente.') }
+    } catch { setUncertain(true); setError('Resultado não confirmado por falha de comunicação. Recarregue os cartões antes de alterar ou cadastrar outro. Repetir o mesmo cadastro é protegido contra duplicação.') }
     finally { mutationLock.current = false; setBusy(false) }
   }
   async function resize(nextFirst: string, nextCount: string) {
@@ -95,16 +103,16 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
       <div className="dialog-heading cards-heading flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy || refreshing} onClick={onClose}><X /></button></div>
       <p className="text-sm text-text-2 mb-4">Faturas entram nas Saídas. Evite duplicar valores no Diário ou em lançamentos antigos.</p>
       {error && <p role="alert" className="text-red mb-3">{error}</p>}
-      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy || refreshing} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy || refreshing} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={onClose}>Fechar</button></div></section> : <>
+      {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy || refreshing || uncertain} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy || refreshing} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={onClose}>Fechar</button></div></section> : <>
         <div className="card-picker flex gap-2 flex-wrap mb-4">
-          {cards.map(c => <button key={c.id} aria-label={c.nome} disabled={busy || refreshing} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}><CardIcon className="mobile-card-icon" size={22} /><span>{c.nome}<small className="mobile-card-due">Vence dia {c.dia_vencimento}</small></span></button>)}
-          <button disabled={busy || refreshing} className={button} onClick={() => choose()}>+ Novo cartão</button>
+          {cards.map(c => <button key={c.id} aria-label={c.nome} disabled={busy || refreshing || uncertain} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}><CardIcon className="mobile-card-icon" size={22} /><span>{c.nome}<small className="mobile-card-due">Vence dia {c.dia_vencimento}</small></span></button>)}
+          <button disabled={busy || refreshing || uncertain} className={button} onClick={() => choose()}>+ Novo cartão</button>
         </div>
-        <fieldset data-form-open={formOpen} disabled={busy || refreshing} className="space-y-3">
+        <fieldset data-form-open={formOpen} disabled={busy || refreshing || uncertain} className="space-y-3">
           <form className="space-y-2" onSubmit={e => {
             e.preventDefault()
             if (card) void run(() => updateCreditCard(card.id, nome, Number(dia)))
-            else if (draft) void run(() => createCreditCard({ nome, dia_vencimento: Number(dia), invoices: draft.map(i => ({ mes_referencia: i.mes_referencia, valor: Number(i.valor) })) }), () => setCreated(true))
+            else if (draft) void run(async () => { const input = { nome: nome.trim(), dia_vencimento: Number(dia), invoices: draft.map(i => ({ mes_referencia: i.mes_referencia, valor: Number(i.valor) })) }; const request = await cardCreationRequest(input); requestKey.current = request.key; return createCreditCard({ ...input, requestId: request.id }) }, () => { if (requestKey.current) sessionStorage.removeItem(requestKey.current); setCreated(true); setUncertain(false) })
           }}>
             <div className="flex flex-wrap items-start gap-3 max-w-[22rem]">
               <label className="text-sm min-w-0 w-48 max-w-full">Nome do cartão<input required maxLength={100} className={field} value={nome} onChange={e => setNome(e.target.value)} /></label>
@@ -133,7 +141,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
           {confirm && card && <div role="alert" className="border border-border rounded-xl p-3 space-y-2"><p>{confirm.kind === 'card' ? 'Excluir este cartão e todas as suas faturas?' : 'Excluir esta fatura?'} A projeção será recalculada. As saídas avulsas permanecem.</p><button className="rounded-xl bg-red text-white px-3 py-2 text-sm" onClick={() => { void run(() => confirm.kind === 'card' ? deleteCreditCard(confirm.id) : deleteCardInvoice(card.id, confirm.id), () => { if (confirm.kind === 'card') choose(); else setConfirm(null) }) }}>Confirmar exclusão</button><button className="ml-3 text-sm" onClick={() => setConfirm(null)}>Cancelar</button></div>}
         </fieldset>
       </>}
-      {!loading && !created && <button disabled={busy || refreshing} className="mt-4 text-accent text-sm" onClick={() => { setLoading(true); getCreditCards().then(result => { setCards(result.cards); setEnabled(result.enabled) }).catch(() => setError('Não foi possível carregar os cartões.')).finally(() => setLoading(false)) }}>Recarregar cartões</button>}
+      {!loading && !created && <button disabled={busy || refreshing} className="mt-4 text-accent text-sm" onClick={() => { setLoading(true); setError(''); const sequence = ++readSequence.current; getCreditCards().then(result => { if (sequence !== readSequence.current) return; setCards(result.cards); setEnabled(result.enabled); setUncertain(false) }).catch(() => setError('Não foi possível carregar os cartões.')).finally(() => setLoading(false)) }}>Recarregar cartões</button>}
       {notice && <p role="status" className="text-sm text-green mt-3">{notice}</p>}
       {refreshing && <p role="status" className="text-sm mt-3">Atualizando saldos…</p>}
       {busy && <p role="status" className="mt-3 text-sm">Salvando…</p>}

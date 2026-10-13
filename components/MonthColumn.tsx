@@ -89,7 +89,7 @@ export default function MonthColumn({
       <div className="month-table-heading grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
         <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Data</span>
         <div className="flex justify-center">
-          <ChoiceField label={`Valores exibidos em ${monthLabel(month.year, month.month)}`} value={mode} onChange={value => onModeChange(value as Mode)} options={[{value:'diario',label:'Diário'},{value:'entrada',label:'Entradas'},{value:'saida',label:'Saídas'}]} className="desktop-column-mode text-xs font-semibold text-text-3 bg-transparent uppercase tracking-wide" />
+          <ChoiceField anchored label={`Valores exibidos em ${monthLabel(month.year, month.month)}`} value={mode} onChange={value => onModeChange(value as Mode)} options={[{value:'diario',label:'Diário'},{value:'entrada',label:'Entradas'},{value:'saida',label:'Saídas'}]} className="desktop-column-mode text-xs font-semibold text-text-3 bg-transparent uppercase tracking-wide" />
           <MobileColumnMode mode={mode} onChange={onModeChange} month={monthLabel(month.year, month.month)} />
         </div>
         <span className="text-right text-xs font-semibold text-text-3 uppercase tracking-wide">Saldo</span>

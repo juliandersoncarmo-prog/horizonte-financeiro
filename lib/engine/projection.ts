@@ -98,6 +98,7 @@ export function projectionHorizon(anchor: string, start: string, months: number)
 export function runProjection(input: ProjectionInput): ProjectionResult {
   const { settings, recurringRules, transactions, dailyBudgets, horizonMonths } = input
 
+  const excluded = new Set((input.recurringExceptions ?? []).map(e => `${e.rule_id}:${e.mes_referencia}`))
   const invoices = cardEvents(input.cards ?? [])
   function indexByDate<T extends { data: string }>(rows: T[]) {
     const result = new Map<string, T[]>()
@@ -148,7 +149,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
       const events: DayEvent[] = []
 
       for (const rule of recurringRules) {
-        if (!isRuleActiveOnDate(rule, dateISO, year, month, d)) continue
+        if (excluded.has(`${rule.id}:${label}`) || !isRuleActiveOnDate(rule, dateISO, year, month, d)) continue
 
         events.push({
           ruleId: rule.id,

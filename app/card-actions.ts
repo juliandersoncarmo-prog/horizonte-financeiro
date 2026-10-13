@@ -16,28 +16,29 @@ async function session() {
   return { db, userId: user.id }
 }
 
-type Result = { success: boolean; error?: string }
+type Result = { success: boolean; error?: string; uncertain?: boolean }
 async function mutate(operation: () => Promise<void>): Promise<Result> {
   try { await operation(); return { success: true } }
-  catch (err) { return { success: false, error: err instanceof Error ? err.message : 'Não foi possível salvar os cartões.' } }
+  catch (err) { return { success: false, uncertain: err instanceof Error && err.message.startsWith('Não foi possível confirmar'), error: err instanceof Error ? err.message : 'Não foi possível salvar os cartões.' } }
 }
 function check(error: unknown, data?: unknown) {
-  if (error || data === null || (Array.isArray(data) && data.length === 0)) throw new Error('Não foi possível alterar o registro. Verifique se ele ainda existe e pertence à sua conta.')
+  if (error) { console.error('card_mutation_failed'); throw new Error('Não foi possível confirmar a alteração. Recarregue os cartões antes de tentar novamente.') }
+  if ( data === null || (Array.isArray(data) && data.length === 0)) throw new Error('Não foi possível alterar o registro. Verifique se ele ainda existe e pertence à sua conta.')
 }
 
 export async function getCreditCards(): Promise<{ enabled: boolean; cards: CreditCard[] }> { return readCreditCards() }
 
-export async function createCreditCard(input: { nome: string; dia_vencimento: number; invoices: { mes_referencia: string; valor: number }[] }): Promise<Result> {
+export async function createCreditCard(input: { nome: string; dia_vencimento: number; requestId?: string; invoices: { mes_referencia: string; valor: number }[] }): Promise<Result> {
   return mutate(async () => {
-    if (!input || !validName(input.nome) || !validDueDay(input.dia_vencimento) || !Array.isArray(input.invoices)
+    if (!input || (input.requestId !== undefined && !validId(input.requestId)) || !validName(input.nome) || !validDueDay(input.dia_vencimento) || !Array.isArray(input.invoices)
       || input.invoices.length < 1 || input.invoices.length > 60
       || input.invoices.some(i => !i || !validMonth(i.mes_referencia) || !validMoney(i.valor))
       || new Set(input.invoices.map(i => i.mes_referencia)).size !== input.invoices.length) throw new Error('Informe nome, vencimento e de 1 a 60 faturas válidas, sem repetir meses.')
     const { db } = await session()
     // Transactional RPC: card and initial invoices commit together, with auth.uid().
-    const { error } = await db.rpc('create_credit_card', { p_nome: input.nome.trim(), p_dia: input.dia_vencimento,
-      p_faturas: input.invoices.map(i => ({ mes_referencia: i.mes_referencia, valor: i.valor })) })
-    check(error)
+    const { data, error } = await db.rpc(input.requestId ? 'create_credit_card_once' : 'create_credit_card', { p_nome: input.nome.trim(), p_dia: input.dia_vencimento,
+      ...(input.requestId ? { p_request_id: input.requestId } : {}), p_faturas: input.invoices.map(i => ({ mes_referencia: i.mes_referencia, valor: i.valor })) })
+    if (error || (input.requestId && !validId(data))) { console.error('card_create_failed', { code: error?.code }); throw new Error('Não foi possível confirmar o cadastro. Recarregue os cartões ou repita esta tentativa; ela não criará duplicação.') }
   })
 }
 

@@ -65,6 +65,7 @@ export const recurringRulesTable = pgTable('recurring_rules', {
   updated_at:    timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('recurring_rules_user_id_idx').on(t.user_id),
+  uniqueIndex('recurring_rules_owner_identity').on(t.user_id,t.id),
 ])
 
 export const dailyBudgetsTable = pgTable('daily_budgets', {
@@ -106,10 +107,11 @@ export const dailyActualsTable = pgTable('daily_actuals', {
 export const creditCardsTable = pgTable('credit_cards', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   user_id: uuid('user_id').notNull(),
+  creation_request_id: uuid('creation_request_id'),
   nome: text('nome').notNull(),
   dia_vencimento: integer('dia_vencimento').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, t => [uniqueIndex('credit_cards_id_user_idx').on(t.id, t.user_id), index('credit_cards_user_idx').on(t.user_id)])
+}, t => [uniqueIndex('credit_cards_creation_request').on(t.user_id,t.creation_request_id), uniqueIndex('credit_cards_id_user_idx').on(t.id, t.user_id), index('credit_cards_user_idx').on(t.user_id)])
 
 export const cardInvoicesTable = pgTable('card_invoices', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -120,3 +122,11 @@ export const cardInvoicesTable = pgTable('card_invoices', {
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex('card_invoices_owner_card_month_idx').on(t.user_id, t.card_id, t.mes_referencia),
   foreignKey({ columns: [t.card_id, t.user_id], foreignColumns: [creditCardsTable.id, creditCardsTable.user_id] }).onDelete('cascade')])
+
+export const recurringExceptionsTable = pgTable('recurring_exceptions', {
+  user_id: uuid('user_id').notNull(),
+  rule_id: uuid('rule_id').notNull(),
+  mes_referencia: text('mes_referencia').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex('recurring_exceptions_identity').on(t.user_id,t.rule_id,t.mes_referencia),
+  foreignKey({ columns: [t.user_id,t.rule_id], foreignColumns: [recurringRulesTable.user_id,recurringRulesTable.id] }).onDelete('cascade')])
