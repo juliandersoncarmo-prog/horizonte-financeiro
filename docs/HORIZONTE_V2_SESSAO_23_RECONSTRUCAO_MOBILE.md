@@ -29,7 +29,8 @@ Abaixo de 360px, ambos os valores e seletor usam 15px (redução proporcional de
 - Lint: passou no repositório; checkout hospedado sem erros, com 1 warning preexistente no login (`window.location.assign`), preservado pelo escopo.
 - Next.js production build: passou com `npx next build --webpack`. Tentativa inicial de Turbopack bloqueada pelo node_modules reutilizado via symlink fora da raiz; recuperação com webpack, sem mudar configuração ou dependências.
 - `node --check scripts/verify-mobile-table-layout.mjs` e `git diff --check`: passaram.
-- Build Vinext e verificação do pacote CSS/Supabase: resultado após empacotamento, abaixo.
+- Build Vinext e verificadores CSS/configuração pública Supabase: passaram. CSS compilado contém subgrid e não contém `money-scale` ou `1.8fr`.
+- Comparação AST do CSS antes/depois: todos os seletores, declarações e condições não relacionados à tabela permanecem idênticos. Não equivale a aprovação visual.
 
 ## Matriz renderizada preparada, ainda NÃO executada
 
@@ -39,7 +40,9 @@ Não há `$control-browser` nesta sessão. Conforme fluxo Sites gerenciado, não
 
 ## Publicação e proveniência
 
-A implementação será empacotada e publicada exclusivamente no site de testes acima, com confirmação nativa. Commit de código, source Sites, deployment e resultado final serão acrescentados após confirmação.
+Publicação nativa confirmada: `succeeded`, revisão de ambiente 1, no site de testes autorizado. GitHub código: `672279e1f3a61308dfc57576f62ffd2e18369b29`; branch `fix/horizonte-mobile-reconstrucao`. Source Sites: `43e4e9960ad24cceaf3908f2b33fc52521db5e0a`. Versão: `appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_29c7e510b7a88191beef62c2bbc327ef`. Deployment: `appgdep_6ace1c601e008191aaa33a3e4f474a17`.
+
+Os três arquivos de implementação publicados são idênticos aos do GitHub; scaffolding Vinext preexistente mantido no Site. Este registro de resultado foi acrescentado em commit documental posterior à publicação, sem mudar a implementação. Commit final é o HEAD da branch que contém este relatório.
 
 ## Anexo — regras mobile substituídas (inclui seletores repetidos)
 
