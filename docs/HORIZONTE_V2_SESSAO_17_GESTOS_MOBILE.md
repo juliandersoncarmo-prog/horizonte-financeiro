@@ -24,4 +24,9 @@ Gesto iniciado em botões, links, campos, edição de texto, menus, sliders e el
 ## Publicação
 Site de testes existente `appgprj_6acd25d8d4708191b849f052ba7532ba`, audiência owner-private preservada.
 URL: https://horizonte-testes-autenticado.juliandersoncarmo.chatgpt.site
-Resultado da publicação será registrado após confirmação pelo Sites.
+Publicação confirmada: **succeeded**, env revision 1 preservada.
+Commit GitHub de implementação: `a4df04aed18084ba0b01fb1a55cd3b7d01f7f44c`.
+Source Sites: `9d5e1c49d8be2c28d476cb40f0856a01e0693834`.
+Versão: `appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_0451f5ed21188191ad9811fda13afd30`.
+Deployment: `appgdep_6acd801ae5d48191bce3a2447d390141`.
+O relatório atualizado integra um commit documental posterior. Apenas arquivos de interface e hook foram transportados para o source Sites; configurações Vinext e Auth preservadas.
