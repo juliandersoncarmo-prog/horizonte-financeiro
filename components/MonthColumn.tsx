@@ -1,6 +1,7 @@
 'use client'
 
 import ChoiceField from './ChoiceField'
+import type { CSSProperties } from 'react'
 
 import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
 import InlineDailyActual from './InlineDailyActual'
@@ -78,6 +79,8 @@ export default function MonthColumn({
           const color      = balanceColor(day.saldo, hasData)
           const isSelected = day.date === selectedDate
           const wday       = WEEKDAY[new Date(day.date + 'T12:00:00').getDay()]
+          const middle = midValue(day, mode)
+          const balance = formatBRL(day.saldo)
 
           return (
             <div
@@ -101,19 +104,19 @@ export default function MonthColumn({
               {/* Coluna central */}
               <div className="day-mid-value text-center min-w-0">
                 {mode === 'diario' ? <InlineDailyActual day={day} /> : <>
-                <span className={`text-sm font-medium num whitespace-nowrap ${
+                <span style={{ '--money-scale': 1.55 / middle.length } as CSSProperties} className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :
                   mode === 'saida'   ? 'text-red'         :
                   day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'
                 }`}>
-                  {midValue(day, mode)}
+                  {middle}
                 </span></>}
               </div>
 
               {/* Saldo */}
               <div className="day-balance text-right">
-                <span className={`text-sm font-semibold num whitespace-nowrap px-1.5 py-0.5 rounded-md ${SALDO_CLASS[color]}`}>
-                  {formatBRL(day.saldo)}
+                <span style={{ '--money-scale': 1.55 / balance.length } as CSSProperties} className={`text-sm font-semibold num whitespace-nowrap px-1.5 py-0.5 rounded-md ${SALDO_CLASS[color]}`}>
+                  {balance}
                 </span>
               </div>
             </div>
