@@ -58,3 +58,27 @@ it('a new authenticated server snapshot replaces local state without retaining t
  const other: ProjectionInput = { ...input, settings: { saldo_abertura: 10, data_ancora: '2026-10-01' }, dailyBudgets: [], dailyActuals: [], transactions: [] }
  await render(<Calendar />, snapshot(other)); expect(observed.months).toEqual(runProjection(other).months); expect(observed.inputSnapshot!.dailyActuals).toEqual([])
 })
+it('keeps the display sizing text during editing and restores it on cancel and Escape without persisting', async () => {
+ await render(<Calendar />)
+ const display = host.querySelector('.daily-display')!, original = display.textContent
+ await click('Editar Diário em 2026-10-02')
+ expect(display.textContent).toBe(original)
+ expect(display.getAttribute('aria-hidden')).toBe('true')
+ expect(display.querySelector('button')!.tabIndex).toBe(-1)
+ expect(host.querySelector('.daily-editor-shell input')?.getAttribute('inputmode')).toBe('decimal')
+ await enter('input', '123,45'); await click('Cancelar Diário')
+ expect(host.querySelector('input')).toBeNull(); expect(display.getAttribute('aria-hidden')).toBeNull()
+ expect(display.textContent).toBe(original); expect(m.save).not.toHaveBeenCalled()
+ expect(document.activeElement).toBe(display.querySelector('button'))
+ await click('Editar Diário em 2026-10-02')
+ await act(() => host.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})))
+ expect(host.querySelector('input')).toBeNull(); expect(m.save).not.toHaveBeenCalled()
+})
+it('rejects a negative value and persists decimal comma only after confirmation', async () => {
+ m.save.mockResolvedValue({ success:true }); await render(<Calendar />)
+ await click('Editar Diário em 2026-10-02'); await enter('input', '-1'); await click('Confirmar Diário')
+ expect(m.save).not.toHaveBeenCalled(); expect(host.querySelector('[role="alert"]')?.textContent).toContain('valor válido')
+ await enter('input', '123,45'); await click('Confirmar Diário')
+ expect(m.save).toHaveBeenCalledWith('2026-10-02', 123.45)
+ expect(host.querySelector('input')).toBeNull()
+})
