@@ -3,7 +3,7 @@
 import { useState, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { TrendingUp, TrendingDown, List, CreditCard, Settings, LogOut, LayoutDashboard, CalendarDays, Menu, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, List, CreditCard, Settings, LogOut, LayoutDashboard, CalendarDays, Menu, X, Home, Plus, BarChart3 } from 'lucide-react'
 import AddTransactionModal from './AddTransactionModal'
 import CreditCardsModal from './CreditCardsModal'
 import DiarioModal from './DiarioModal'
@@ -27,6 +27,8 @@ function subscribeTheme(callback: () => void) {
 export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horizonte Financeiro', initials: 'HF' } }: { profile?: { name: string; email: string; initials: string } }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
   const [showCards, setShowCards] = useState(false)
@@ -36,6 +38,14 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const update = () => setKeyboardOpen(!!viewport && window.innerHeight - viewport.height > 150 && !!document.activeElement?.matches('input, textarea, select'))
+    viewport?.addEventListener('resize', update)
+    document.addEventListener('focusout', update)
+    return () => { viewport?.removeEventListener('resize', update); document.removeEventListener('focusout', update) }
+  }, [])
 
   function toggleTheme() {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -160,8 +170,23 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
 
     <header className="mobile-header">
       <button type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu size={22} /></button>
-      <span className="font-semibold text-text">Horizonte</span>
+      <span className="mobile-brand font-semibold text-text">Horizonte</span>
+      <Link href="/configuracoes" prefetch={false} className="mobile-avatar" aria-label="Configurações da conta">{profile.initials}</Link>
     </header>
+    <nav className={`mobile-bottom-nav${keyboardOpen ? ' keyboard-open' : ''}`} aria-label="Navegação principal">
+      <Link href="/" aria-current={pathname === '/' && !showDiario && !showCards && !showSummary ? 'page' : undefined}><Home size={22} /><span>Início</span></Link>
+      <button type="button" onClick={() => setShowDiario(true)} aria-pressed={showDiario}><CalendarDays size={22} /><span>Diário</span></button>
+      <button type="button" className="mobile-add" aria-label="Novo lançamento" onClick={() => setShowAdd(true)}><Plus size={32} /></button>
+      <button type="button" onClick={() => setShowCards(true)} aria-pressed={showCards}><CreditCard size={22} /><span>Cartões</span></button>
+      <button type="button" onClick={() => setShowSummary(true)} aria-pressed={showSummary}><BarChart3 size={22} /><span>Resumo</span></button>
+    </nav>
+    {showAdd && <ModalPortal label="Novo lançamento" onClose={() => setShowAdd(false)}>
+      <div className="bg-surface p-5 rounded-2xl border border-border">
+        <div className="flex items-center justify-between mb-4"><h2 className="font-semibold text-text">Novo lançamento</h2><button type="button" aria-label="Fechar opções" onClick={() => setShowAdd(false)} className="p-3"><X size={20} /></button></div>
+        <button type="button" className="mobile-new-entry" onClick={() => { setShowAdd(false); setModal('entrada') }}><TrendingUp size={22} />Nova entrada</button>
+        <button type="button" className="mobile-new-expense" onClick={() => { setShowAdd(false); setModal('saida') }}><TrendingDown size={22} />Nova saída</button>
+      </div>
+    </ModalPortal>}
     <aside className="desktop-sidebar w-60 flex-none flex flex-col border-r border-border bg-surface h-full">{content}</aside>
     {menuOpen && <ModalPortal label="Menu de navegação" onClose={() => setMenuOpen(false)}>
       <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, nav a')) setMenuOpen(false) }}>

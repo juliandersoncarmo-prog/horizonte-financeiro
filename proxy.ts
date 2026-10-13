@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { assertTestProject } from '@/lib/supabase/test-project'
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/callback']
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/callback', '/api/auth/login']
 
 export async function proxy(request: NextRequest) {
   assertTestProject()

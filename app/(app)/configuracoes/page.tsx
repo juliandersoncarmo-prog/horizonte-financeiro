@@ -6,7 +6,7 @@ export default async function ConfiguracoesPage() {
   const settings = await getInitialSettings()
   if (!settings) return null
   return (
-    <div className="flex-1 p-8 max-w-lg">
+    <div className="settings-page flex-1 p-8 max-w-lg overflow-y-auto">
       <h1 className="text-2xl font-bold text-text mb-8">Configurações</h1>
 
       <div className="bg-surface border border-border rounded-2xl p-6 mb-6">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ModalPortal from './ModalPortal'
 import { useOptionalProjection } from './ProjectionProvider'
-import { X } from 'lucide-react'
+import { X, CreditCard as CardIcon } from 'lucide-react'
 import { createCreditCard, deleteCreditCard, deleteCardInvoice, getCreditCards, saveCardInvoice, updateCreditCard } from '@/app/card-actions'
 import { invoiceDate, resizeInvoiceDraft, invoiceMonthLabel } from '@/lib/cards'
 import { formatBRL } from '@/lib/engine/projection'
@@ -27,6 +27,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState(false)
+  const [formOpen, setFormOpen] = useState(!!initialCardId)
   const [selected, setSelected] = useState<string | null>(initialCardId ?? null)
   const [nome, setNome] = useState(seed?.cards.find(c => c.id === initialCardId)?.nome ?? '')
   const [dia, setDia] = useState(() => { const initial = seed?.cards.find(c => c.id === initialCardId); return initial ? String(initial.dia_vencimento) : '' })
@@ -50,6 +51,7 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
 
 
   function choose(c?: CreditCard) {
+    setFormOpen(true)
     setSelected(c?.id ?? null); setNome(c?.nome ?? ''); setDia(c ? String(c.dia_vencimento) : '')
     setCreated(false); setFirst(currentMonth()); setDraft(null); setCount(''); setInvoice(null); setConfirm(null); setError('')
   }
@@ -86,16 +88,16 @@ export default function CreditCardsModal({ onClose, initialCardId }: { onClose: 
   function editInvoice(i: CardInvoice) { setInvoice({ id: i.id, month: i.mes_referencia, value: String(i.valor) }); setConfirm(null) }
 
   return <ModalPortal onClose={() => { if (!busy) onClose() }} label="Cartões de crédito">
-    <div ref={dialog} tabIndex={-1} className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
+    <div ref={dialog} tabIndex={-1} className="cards-panel relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface text-text border border-border shadow-xl p-5">
       <div className="flex items-center justify-between mb-3"><h2 id="cards-title" className="text-lg font-semibold">Cartões de crédito</h2><button aria-label="Fechar cartões" disabled={busy || refreshing} onClick={onClose}><X /></button></div>
       <p className="text-sm text-text-2 mb-4">Faturas entram nas Saídas. Evite duplicar valores no Diário ou em lançamentos antigos.</p>
       {error && <p role="alert" className="text-red mb-3">{error}</p>}
       {loading ? <p role="status">Carregando cartões…</p> : enabled === false ? <p>Cartões aguardam habilitação no ambiente de testes.</p> : enabled === null ? <p>Não foi possível abrir o gerenciador. Recarregue para tentar novamente.</p> : created ? <section className="rounded-xl bg-accent-soft p-5 space-y-3"><h3 role="status" className="text-lg font-semibold text-accent">Cartão cadastrado!</h3><p className="text-sm">As faturas foram incluídas na projeção.</p><div className="flex gap-2"><button disabled={busy || refreshing} className={button} onClick={() => choose()}>Cadastrar outro</button><button disabled={busy || refreshing} className="border border-border rounded-xl px-3 py-2 text-sm" onClick={onClose}>Fechar</button></div></section> : <>
-        <div className="flex gap-2 flex-wrap mb-4">
-          {cards.map(c => <button key={c.id} disabled={busy || refreshing} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}>{c.nome}</button>)}
+        <div className="card-picker flex gap-2 flex-wrap mb-4">
+          {cards.map(c => <button key={c.id} aria-label={c.nome} disabled={busy || refreshing} aria-pressed={selected === c.id} className={`border border-border rounded-xl px-3 py-2 text-sm ${selected === c.id ? 'bg-accent-soft text-accent' : 'bg-surface-2'}`} onClick={() => choose(c)}><CardIcon className="mobile-card-icon" size={22} /><span>{c.nome}<small className="mobile-card-due">Vence dia {c.dia_vencimento}</small></span></button>)}
           <button disabled={busy || refreshing} className={button} onClick={() => choose()}>+ Novo cartão</button>
         </div>
-        <fieldset disabled={busy || refreshing} className="space-y-3">
+        <fieldset data-form-open={formOpen} disabled={busy || refreshing} className="space-y-3">
           <form className="space-y-2" onSubmit={e => {
             e.preventDefault()
             if (card) void run(() => updateCreditCard(card.id, nome, Number(dia)))

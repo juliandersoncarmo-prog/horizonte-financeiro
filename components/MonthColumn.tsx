@@ -39,10 +39,10 @@ export default function MonthColumn({
 }: MonthColumnProps) {
   const exhausted = exhaustedDailyBudget(month)
   return (
-    <div className={`flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
+    <div className={`month-card flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
 
       {/* Month header */}
-      <div className="px-4 py-3 border-b border-border bg-surface flex-none">
+      <div className="month-heading px-4 py-3 border-b border-border bg-surface flex-none">
         <h2 className="relative pr-5 text-base font-bold text-text leading-tight">
           {monthLabel(month.year, month.month)}
           {mode === 'diario' && exhausted && <span role="status" aria-label="Orçamento do Diário esgotado" title="Orçamento do Diário esgotado" className="absolute right-0 top-0 inline-flex h-4 w-4 items-center justify-center rounded-full bg-surface-2 text-text-3 text-[10px] font-normal">!</span>}
@@ -60,7 +60,7 @@ export default function MonthColumn({
       </div>
 
       {/* Column headers — same grid as day rows */}
-      <div className="grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
+      <div className="month-table-heading grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
         <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Data</span>
         <div className="flex justify-center">
           <select
@@ -89,7 +89,7 @@ export default function MonthColumn({
               key={day.date}
               onClick={() => onDaySelect(day.date)}
               className={[
-                'w-full grid grid-cols-[72px_1fr_96px] h-9 items-center px-3 text-left transition-colors',
+                'month-day-row w-full grid grid-cols-[72px_1fr_96px] h-9 items-center px-3 text-left transition-colors',
                 isSelected  ? 'bg-accent-soft' :
                 day.isToday ? 'bg-blue-50'     :
                 'hover:bg-surface-2',
@@ -116,7 +116,7 @@ export default function MonthColumn({
               </div>
 
               {/* Saldo */}
-              <div className="text-right">
+              <div className="day-balance text-right">
                 <span className={`text-sm font-semibold num whitespace-nowrap px-1.5 py-0.5 rounded-md ${SALDO_CLASS[color]}`}>
                   {formatBRL(day.saldo)}
                 </span>

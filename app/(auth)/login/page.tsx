@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { passwordSignIn, withAuthDeadline } from '@/lib/auth-request'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const lock = useRef(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -14,28 +14,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   async function handleSignIn() {
-    setError('')
-    setLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      router.push('/')
-    }
+    if (lock.current) return
+    lock.current = true; setError(''); setLoading(true)
+    try {
+      await passwordSignIn(email, password)
+      // A document navigation sends the newly issued cookies and avoids stale RSC caches.
+      window.location.assign('/')
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Falha de conexão. Tente novamente.')
+    } finally { lock.current = false; setLoading(false) }
   }
 
   async function handleGoogleSignIn() {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' },
-    })
+    if (lock.current) return
+    lock.current = true; setError(''); setLoading(true)
+    try {
+      const { data, error } = await withAuthDeadline(() => createClient().auth.signInWithOAuth({
+        provider: 'google', options: { redirectTo: window.location.origin + '/auth/callback', skipBrowserRedirect: true },
+      }))
+      if (error || !data.url) setError('Não foi possível iniciar o login Google. Tente novamente.')
+      else window.location.assign(data.url)
+    } catch { setError('Não foi possível conectar ao Google. Tente novamente.') }
+    finally { lock.current = false; setLoading(false) }
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F0F2F8] flex items-center justify-center p-6">
+    <div className="min-h-screen w-full auth-screen bg-[#F0F2F8] flex items-center justify-center p-6">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-row">
       {/* Painel esquerdo */}
       <div
@@ -100,7 +104,7 @@ export default function LoginPage() {
       </div>
 
       {/* Painel direito */}
-      <div className="flex flex-col justify-center p-10 w-full md:w-1/2">
+      <div className="flex flex-col justify-center p-6 sm:p-10 w-full md:w-1/2">
           {/* Logo centralizado */}
           <div className="flex justify-center mb-8">
             <div
@@ -119,17 +123,19 @@ export default function LoginPage() {
             Acesse seu horizonte financeiro
           </p>
 
+          <form onSubmit={event => { event.preventDefault(); void handleSignIn() }}>
           {/* Erro */}
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div role="alert" className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {/* Campo E-mail */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
             <input
+              id="login-email" name="email" autoComplete="username" required disabled={loading}
               type="email"
               placeholder="seu@email.com"
               value={email}
@@ -140,9 +146,10 @@ export default function LoginPage() {
 
           {/* Campo Senha */}
           <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
             <div className="relative">
               <input
+                id="login-password" name="password" autoComplete="current-password" required disabled={loading}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
@@ -181,21 +188,12 @@ export default function LoginPage() {
           </div>
 
           {/* Botão Entrar */}
-          <div
-            onClick={!loading ? handleSignIn : undefined}
-            className="w-full rounded-lg py-2.5 text-sm font-semibold text-white text-center cursor-pointer transition mb-4 select-none"
-            style={{
-              backgroundColor: loading ? '#7D9BF0' : '#3B5BDB',
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) (e.currentTarget as HTMLDivElement).style.backgroundColor = '#2F4EC0'
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) (e.currentTarget as HTMLDivElement).style.backgroundColor = '#3B5BDB'
-            }}
-          >
+          <button type="submit" disabled={loading} aria-busy={loading}
+            className="w-full rounded-lg py-3 text-sm font-semibold text-white text-center transition mb-4 disabled:opacity-60"
+            style={{ backgroundColor: '#3B5BDB' }}>
             {loading ? 'Entrando…' : 'Entrar'}
-          </div>
+          </button>
+          </form>
 
           {/* Rodapé */}
           <p className="text-center text-sm text-gray-500 mb-4">
@@ -213,13 +211,13 @@ export default function LoginPage() {
           </div>
 
           {/* Botão Google */}
-          <div
-            onClick={handleGoogleSignIn}
+          <button type="button" disabled={loading}
+            onClick={() => void handleGoogleSignIn()}
             className="w-full flex items-center justify-center gap-3 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 bg-white cursor-pointer hover:bg-gray-50 transition select-none"
           >
             <GoogleIcon />
             Continuar com Google
-          </div>
+          </button>
       </div>
       </div>
     </div>

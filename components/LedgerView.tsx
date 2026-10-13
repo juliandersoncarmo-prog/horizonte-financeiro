@@ -66,7 +66,7 @@ export default function LedgerView({ projection }: LedgerViewProps) {
   )
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="ledger-view flex flex-col h-full overflow-hidden">
       {/* KPI cards */}
       <div className="ledger-kpis grid grid-cols-3 gap-3 px-6 py-4 flex-none">
         <KpiCard

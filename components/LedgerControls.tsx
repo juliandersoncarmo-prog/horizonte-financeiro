@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
+import { monthLabel } from '@/lib/engine/projection'
 import type { MonthResult } from '@/types'
 
 interface LedgerControlsProps {
@@ -51,20 +52,23 @@ export default function LedgerControls({ months, startIndex, visible, onStartCha
         aria-label="Ano da projeção"
         value={currentYear}
         onChange={e => jumpToYear(Number(e.target.value))}
-        className="text-sm border border-border rounded-xl px-3 py-1.5 bg-surface text-text focus:outline-none focus:border-accent cursor-pointer"
+        className="ledger-year text-sm border border-border rounded-xl px-3 py-1.5 bg-surface text-text focus:outline-none focus:border-accent cursor-pointer"
       >
         {yearRange.map(year => (
           <option key={year} value={year}>{year}</option>
         ))}
       </select>
 
-      <div className="flex items-center gap-1">
+      <div className="month-navigation flex items-center gap-1">
         <button
           aria-label="Mês anterior"
           onClick={() => onStartChange(startIndex - 1)}
           disabled={atFirst}
           className={`${btnBase} w-8 h-8 text-base`}
         >‹</button>
+        <select className="mobile-month-select" aria-label="Mês exibido" value={startIndex} onChange={event => onStartChange(Number(event.target.value))}>
+          {months.map((month, index) => <option key={month.label} value={index}>{monthLabel(month.year, month.month)}</option>)}
+        </select>
         <button
           aria-label="Próximo mês"
           onClick={() => onStartChange(startIndex + 1)}
