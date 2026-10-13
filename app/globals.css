@@ -141,32 +141,6 @@ body {
   .kpi-card[data-tone="neutral"] p.num { color: var(--text-3); }
   .ledger-kpis > :first-child p.num { font-size: 25px; }
   .kpi-card p.num + p, .kpi-card > div > div:last-child:has(svg) { display: none; }
-  .ledger-months { padding: 0 12px 12px; flex: none; overflow: visible; }
-  .month-card { height: auto; box-shadow: none; border-radius: 13px; }
-  .month-heading { padding: 0; border: 0; height: 0; }
-  .month-heading h2 { height: 0; overflow: visible; font-size: 0; padding: 0; }
-  .month-heading h2 > span { right: 4px; top: 8px; z-index: 1; }
-  .month-heading > div { display: none; }
-  .month-scroll { overflow: visible; flex: none; }
-  .ledger-months .grid { grid-template-columns: 53px minmax(0, 1fr) minmax(100px, 1.08fr); padding-left: 9px; padding-right: 9px; gap: 2px; }
-  .month-table-heading { min-height: 38px; background: var(--surface-3); }
-  .month-table-heading > span, .month-table-heading select { font-size: 13px; color: var(--text-2); text-transform: none; letter-spacing: 0; }
-  .month-table-heading select { max-width: 100%; padding: 4px 0; min-height: 32px; }
-  .month-day-row { min-height: 40px; height: auto; padding-top: 3px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
-  .month-day-row:last-child { border: 0; }
-  .month-day-row > button { min-height: 34px; align-items: center; }
-  .ledger-months .grid .num { font-size: 12px; }
-  .month-day-row > button .num { font-size: 13px; font-weight: 500; }
-  .month-day-row > button > span:last-child { font-size: 11px; }
-  .day-balance { min-width: 0; }
-  .day-balance > span { display: inline-block; max-width: 100%; padding: 5px 6px; border-radius: 7px; white-space: normal; overflow-wrap: anywhere; }
-  .month-day-row .daily-actual { color: var(--red); }
-  .month-day-row form { flex-wrap: wrap; height: auto; justify-content: center; }
-  .month-day-row input { flex-basis: 100%; height: 32px; font-size: 16px; }
-  .month-day-row form button { min-height: 32px; min-width: 32px; }
-  .month-day-row .relative > div { gap: 0; height: auto; flex-wrap: wrap; }
-  .month-day-row .relative > div > span { white-space: normal; overflow-wrap: anywhere; }
-  .month-day-row .relative > div > button { min-height: 32px; width: 22px; }
   .mobile-bottom-nav { position: fixed; z-index: 40; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; min-height: 76px; padding: 5px max(6px, env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); background: var(--surface); border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; }
   .mobile-bottom-nav > a, .mobile-bottom-nav > button { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 48px; color: var(--text-3); font-size: 11px; }
   .mobile-bottom-nav > [aria-current], .mobile-bottom-nav > [aria-pressed="true"] { color: var(--accent); }
@@ -209,42 +183,15 @@ body {
 
 /* Session 16: retain the established mobile structure and desktop layout. */
 @media (max-width: 639px) {
-  .mobile-header, .ledger-controls, .ledger-kpis, .ledger-months { padding-left: 16px; padding-right: 16px; }
+  .mobile-header, .ledger-controls, .ledger-kpis { padding-left: 16px; padding-right: 16px; }
   .ledger-controls { gap: 8px; }
   .ledger-kpis { gap: 10px; padding-bottom: 14px; }
-  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: 54px minmax(0, 1fr) minmax(96px, 1.08fr); padding-left: 10px; padding-right: 10px; gap: 4px; }
-  .month-table-heading { min-height: 46px; }
-  .month-table-heading > span:last-child { padding-right: 6px; }
-  .month-table-heading .desktop-column-mode { display: none; }
-  .mobile-column-mode { display: block; position: relative; min-width: 0; max-width: 100%; }
-  .column-mode-trigger { display: inline-grid; grid-template-columns: 14px auto 14px; align-items: center; justify-content: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 0 3px; color: var(--text-2); font-size: 13px; font-weight: 600; border-radius: 8px; }
-  .column-mode-trigger::before { content: ""; }
-  .column-mode-trigger svg { flex-shrink: 0; transition: transform .15s; }
-  .column-mode-trigger[aria-expanded="true"] { color: var(--accent); }
-  .column-mode-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
-  .column-mode-trigger:focus-visible, .column-mode-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .column-mode-menu { position: absolute; z-index: 30; top: 100%; left: 50%; transform: translateX(-50%); width: 140px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px #10204020; }
-  .column-mode-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 10px; border-radius: 8px; color: var(--text); font-size: 13px; text-align: left; }
-  .column-mode-menu button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .month-day-row .daily-display { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 0; align-items: center; }
-  .month-day-row .daily-display > span { grid-column: 2; text-align: center; min-width: 0; }
-  .month-day-row .daily-display > button { grid-column: 3; width: 22px; min-height: 36px; justify-self: end; }
-  .month-day-row > div:nth-child(2) > span { display: block; text-align: right; padding-right: 28px; white-space: normal; overflow-wrap: anywhere; }
-  .month-day-row { min-height: 44px; }
-  .month-heading h2 > span { right: 4px; top: 15px; pointer-events: none; }
 }
 
 @media (max-width: 639px) {
   .mobile-swipe-area { touch-action: pan-y pinch-zoom; }
 }
 
-/* Mobile value columns share a center, with symmetrical edit-icon space. */
-@media (max-width: 639px) {
-  .ledger-months .month-day-row .day-mid-value > span.num,
-  .ledger-months .month-day-row .daily-display > span.num,
-  .ledger-months .month-day-row .day-balance .num { font-size: 14px; }
-  .day-mid-value > span { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-}
 
 /* Shared application choices and viewport dialogs, also usable by keyboard. */
 .choice-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -273,29 +220,11 @@ body {
 .cards-heading, .summary-panel > .dialog-heading { margin-top: -5px; padding-top: 5px; padding-bottom: 8px; }
 @media (min-width: 640px) { .choice-trigger.mobile-month-select { display: none; } }
 
-/* Session 19: explicit tracks shared by header and rows; no mode-specific offsets. */
+/* Session 19: shared choices and mobile dialogs. */
 @media (max-width: 639px) {
-  .ledger-months .month-table-heading, .ledger-months .month-day-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding-left: 8px; padding-right: 8px; gap: 6px;
-  }
-  .month-day-row > div:nth-child(2) > span,
-  .ledger-months .month-day-row .day-mid-value > span.num {
-    display: block; text-align: center; padding: 0; max-width: 100%;
-    white-space: normal; overflow-wrap: anywhere;
-  }
-  .month-table-heading > div { min-width: 0; }
-  .column-mode-trigger { display: flex; gap: 4px; padding: 0; }
-  .column-mode-trigger::before { content: none; }
-  .column-mode-trigger svg { width: 12px; }
-  .month-day-row .daily-display { position: relative; display: flex; justify-content: center; min-height: 46px; padding-bottom: 14px; }
-  .month-day-row .daily-display > span { display: block; width: 100%; text-align: center; }
-  .month-day-row .daily-display > button { position: absolute; right: 0; bottom: -3px; width: 24px; min-height: 24px; }
-  .month-day-row .day-balance .num { padding: 5px 4px; }
   .choice-trigger.mobile-month-select { display: flex; justify-content: center; font-size: 17px; padding: 0 8px; }
   .ledger-controls .choice-trigger.mobile-month-select { font-size: 17px; }
   .mobile-month-select > svg { display: none; }
-  .choice-trigger.desktop-column-mode { display: none; }
   .event-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 0 4px; padding: 8px 10px; }
   .event-row > .event-description { width: auto; grid-column: 1; grid-row: 1; }
   .event-row > .event-trailing { display: contents; margin: 0; }
@@ -312,32 +241,19 @@ body {
   .day-detail-panel > .dialog-heading > div { min-width: 0; overflow-wrap: anywhere; }
   [role="dialog"] { overscroll-behavior: contain; }
 }
-@media (max-width: 359px) {
-  .ledger-months .month-table-heading, .ledger-months .month-day-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .ledger-months .month-day-row .day-mid-value > span.num,
-  .ledger-months .month-day-row .daily-display > span.num,
-  .ledger-months .month-day-row .day-balance .num { font-size: 12px; }
-  .column-mode-trigger { font-size: 12px; gap: 2px; }
-}
 @media (max-width: 639px) {
   .mobile-drawer > button:first-child { position: sticky; top: 0; z-index: 5; background: var(--surface); }
   .settings-page input { font-size: 16px; min-height: 44px; min-width: 0; max-width: 100%; }
   .settings-page button { min-height: 44px; }
 }
 
-/* Session 20: mobile-only recovery, equal tracks and isolated edit actions. */
+/* Session 20: month navigation recovery and isolated edit actions. */
 @media (max-width: 639px) {
   /* ChoiceField's later display:flex must not reveal the desktop year control. */
   .ledger-controls .choice-trigger.ledger-year { display: none; }
   .ledger-controls .month-navigation { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; }
   .ledger-controls .mobile-month-select > span { white-space: nowrap; overflow-wrap: normal; }
   .ledger-controls .mobile-month-select { width: 100%; min-width: 0; font-size: clamp(14px, 4.2vw, 17px); }
-  /* The same 100%-wide box is centered in the middle track for every mode. */
-  .ledger-months .day-mid-value { width: 100%; justify-self: stretch; }
-  .ledger-months .day-mid-value > span.num,
-  .ledger-months .daily-display > span.num { width: 100%; }
-  .month-table-heading .mobile-column-mode { width: 100%; }
-  .month-table-heading .column-mode-trigger { width: 100%; justify-content: center; }
   /* Adjacent 40x44 touch targets; icons face inward with an 8px visual gap. */
   .event-actions .event-action { width: 40px; height: 44px; padding: 0; }
   .event-actions .event-action:first-child { justify-content: flex-end; padding-right: 4px; }
@@ -351,63 +267,65 @@ body {
   .card-first-month .month-field { font-size: 14px; padding-left: 8px; padding-right: 8px; gap: 6px; }
 }
 
-/* Approved Alternative 2: full content width independently of inner tracks.
-   Amount + pencil stay compact, with a restrained 2px rightward bias.
-   Long amounts scale within their cell, preserving the complete string. */
+
+/* Ledger table wrappers are transparent to the existing desktop flex layout. */
+.month-table-viewport, .month-table { display: contents; }
+
+/* Mobile ledger: one intrinsic grid shared by header and every day via subgrid.
+   Keep money legible; exceptional content scrolls inside the full-width card. */
 @media (max-width: 639px) {
-  .ledger-months {
-    box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%;
-    align-self: stretch; padding-left: 16px; padding-right: 16px;
+  .ledger-months { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; padding: 0 16px 12px; flex: none; overflow: visible; }
+  .ledger-months > .month-card { box-sizing: border-box; flex: 0 0 100%; width: 100%; min-width: 0; max-width: 100%; margin: 0; height: auto; box-shadow: none; border-radius: 13px; }
+  .month-heading { padding: 0; border: 0; height: 0; }
+  .month-heading h2 { height: 0; overflow: visible; font-size: 0; padding: 0; }
+  .month-heading h2 > span { right: 4px; top: 15px; z-index: 1; pointer-events: none; }
+  .month-heading > div { display: none; }
+  .ledger-months .month-table-viewport { display: block; width: 100%; min-width: 0; overflow-x: auto; }
+  .ledger-months .month-table {
+    display: grid; grid-template-columns: max-content max-content max-content; justify-content: space-between;
+    column-gap: 8px; width: max-content; min-width: 100%; box-sizing: border-box;
   }
-  .ledger-months > .month-card {
-    box-sizing: border-box; flex: 0 0 100%; width: 100%; min-width: 0; max-width: 100%;
-    margin-left: 0; margin-right: 0;
+  .ledger-months .month-table-heading, .ledger-months .month-scroll, .ledger-months .month-day-row {
+    display: grid; grid-template-columns: subgrid; grid-column: 1 / -1;
+    column-gap: inherit; min-width: 0;
   }
-  .ledger-months .month-scroll,
-  .ledger-months .month-table-heading,
-  .ledger-months .month-day-row { box-sizing: border-box; width: 100%; min-width: 0; }
-  .ledger-months .month-table-heading,
-  .ledger-months .month-day-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 1fr);
-    padding-left: 6px; padding-right: 6px; gap: 2px;
-  }
-  .ledger-months .month-table-heading { min-height: 40px; padding-top: 0; padding-bottom: 0; }
-  .ledger-months .month-table-heading > span { font-size: 13px; }
-  .ledger-months .month-table-heading > span:last-child { padding-right: 0; }
-  .ledger-months .column-mode-trigger { min-height: 40px; font-size: 13px; gap: 4px; flex-wrap: nowrap; padding-left: 4px; padding-right: 0; }
-  .ledger-months .column-mode-trigger > span { white-space: nowrap; }
-  .ledger-months .column-mode-trigger > svg { flex-shrink: 0; }
-  .ledger-months .month-day-row {
-    height: 40px; min-height: 40px; padding-top: 2px; padding-bottom: 2px;
-  }
-  .ledger-months .month-day-row > button { min-width: 0; gap: 4px; }
+  .ledger-months .month-scroll { overflow: visible; flex: none; }
+  .ledger-months .month-table-heading, .ledger-months .month-day-row { padding-left: 6px; padding-right: 6px; align-items: center; }
+  .ledger-months .month-table-heading { min-height: 40px; padding-top: 0; padding-bottom: 0; background: var(--surface-3); }
+  .ledger-months .month-table-heading > span { font-size: 13px; color: var(--text-2); text-transform: none; letter-spacing: 0; }
+  .ledger-months .month-table-heading > div { min-width: 0; }
+  .ledger-months .desktop-column-mode { display: none; }
+  .ledger-months .mobile-column-mode { display: block; position: relative; }
+  .ledger-months .column-mode-trigger { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 40px; padding: 0; color: var(--text-2); font-size: 16px; font-weight: 600; border-radius: 8px; white-space: nowrap; }
+  .ledger-months .column-mode-trigger svg { width: 12px; flex-shrink: 0; transition: transform .15s; }
+  .ledger-months .column-mode-trigger[aria-expanded="true"] { color: var(--accent); }
+  .ledger-months .column-mode-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .ledger-months .column-mode-trigger:focus-visible, .ledger-months .column-mode-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ledger-months .column-mode-menu { position: absolute; z-index: 30; top: 100%; left: 50%; transform: translateX(-50%); width: 140px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px #10204020; }
+  .ledger-months .column-mode-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 10px; border-radius: 8px; color: var(--text); font-size: 13px; text-align: left; }
+  .ledger-months .column-mode-menu button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .ledger-months .month-day-row { height: 40px; min-height: 40px; padding-top: 2px; padding-bottom: 2px; border-bottom: 1px solid var(--border); }
+  .ledger-months .month-day-row:last-child { border-bottom: 0; }
+  .ledger-months .month-day-row > button { min-height: 34px; display: flex; align-items: center; gap: 4px; }
   .ledger-months .month-day-row > button .num { font-size: 15px; font-weight: 600; }
   .ledger-months .month-day-row > button > span:last-child { font-size: 12px; margin-left: 0; color: var(--text-2); }
-  .ledger-months .day-mid-value,
-  .ledger-months .day-balance { container-type: inline-size; min-width: 0; }
-  .ledger-months .month-day-row .day-mid-value > span.num {
-    width: 100%; padding: 0 0 0 4px; text-align: center; font-weight: 600;
-    font-size: min(16px, calc((100cqw - 4px) * var(--money-scale)));
-    line-height: 20px; white-space: nowrap; overflow-wrap: normal;
+  .ledger-months .day-mid-value { text-align: center; }
+  .ledger-months .day-balance { text-align: right; }
+  .ledger-months .day-mid-value > span.num, .ledger-months .daily-display > span.num, .ledger-months .day-balance > span.num {
+    font-size: 16px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow-wrap: normal; font-variant-numeric: tabular-nums;
   }
-  .ledger-months .month-day-row .daily-display {
-    display: flex; justify-content: center; align-items: center; gap: 5px;
-    width: 100%; height: 32px; min-height: 32px; padding: 0 0 0 4px; flex-wrap: nowrap;
-  }
-  .ledger-months .month-day-row .daily-display > span.num {
-    flex: 0 1 auto; width: auto; min-width: 0; max-width: calc(100% - 17px); padding: 0; font-weight: 600;
-    font-size: min(16px, calc((100cqw - 21px) * var(--money-scale)));
-    line-height: 20px; white-space: nowrap; overflow-wrap: normal; text-align: center;
-  }
-  .ledger-months .month-day-row .daily-display > button {
-    position: static; flex: 0 0 12px;
-    width: 12px; height: 32px; min-height: 32px; padding: 0;
-  }
-  .ledger-months .month-day-row .day-balance > span.num {
-    max-width: 100%; padding: 4px 3px; white-space: nowrap; overflow-wrap: normal;
-    font-size: min(14px, calc((100cqw - 6px) * var(--money-scale))); line-height: 20px;
-  }
-  .ledger-months .month-day-row form { flex-wrap: nowrap; height: 32px; gap: 0; }
-  .ledger-months .month-day-row input { flex-basis: auto; min-width: 0; height: 32px; }
+  .ledger-months .daily-display { display: flex; align-items: center; justify-content: center; gap: 5px; height: 32px; flex-wrap: nowrap; }
+  .ledger-months .daily-display > span { flex: 0 0 auto; }
+  .ledger-months .daily-display > button { position: static; flex: 0 0 12px; width: 12px; height: 32px; padding: 0; }
+  .ledger-months .daily-actual { color: var(--red); }
+  .ledger-months .day-balance > span { display: inline-block; padding: 4px 3px; border-radius: 7px; }
+  .ledger-months .month-day-row form { flex-wrap: nowrap; height: 32px; gap: 0; min-width: 0; }
+  .ledger-months .month-day-row input { flex-basis: auto; min-width: 0; width: 100%; height: 32px; font-size: 16px; }
   .ledger-months .month-day-row form button { width: 22px; min-width: 22px; min-height: 32px; }
+}
+/* Narrow screens free date space and reduce BOTH money columns by only 1px. */
+@media (max-width: 359px) {
+  .ledger-months .month-table { column-gap: 6px; }
+  .ledger-months .month-day-row > button { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+  .ledger-months .day-mid-value > span.num, .ledger-months .daily-display > span.num, .ledger-months .day-balance > span.num, .ledger-months .column-mode-trigger { font-size: 15px; }
 }

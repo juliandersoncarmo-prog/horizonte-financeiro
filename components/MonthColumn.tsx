@@ -1,7 +1,7 @@
 'use client'
 
+import { useRef } from 'react'
 import ChoiceField from './ChoiceField'
-import type { CSSProperties } from 'react'
 
 import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
 import InlineDailyActual from './InlineDailyActual'
@@ -41,6 +41,9 @@ interface MonthColumnProps {
 export default function MonthColumn({
   month, selectedDate, onDaySelect, mode, onModeChange, className, hasData,
 }: MonthColumnProps) {
+  // Overflow uses the existing gesture boundary only when content needs scrolling.
+  const scrollTouch = useRef<{ x: number; y: number; left: number } | null>(null)
+  const dragged = useRef(false)
   const exhausted = exhaustedDailyBudget(month)
   return (
     <div className={`month-card flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
@@ -63,6 +66,25 @@ export default function MonthColumn({
         </div>
       </div>
 
+      <div className="month-table-viewport" onTouchStart={event => {
+        dragged.current = false
+        if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth || event.touches.length !== 1) return
+        event.stopPropagation()
+        const touch = event.touches[0]
+        scrollTouch.current = { x: touch.clientX, y: touch.clientY, left: event.currentTarget.scrollLeft }
+      }} onTouchMove={event => {
+        const start = scrollTouch.current
+        if (!start || event.touches.length !== 1) return
+        event.stopPropagation()
+        const touch = event.touches[0], dx = touch.clientX - start.x, dy = touch.clientY - start.y
+        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          event.currentTarget.scrollLeft = start.left - dx
+          dragged.current = true
+        }
+      }} onTouchEnd={event => { if (scrollTouch.current) event.stopPropagation(); scrollTouch.current = null }} onTouchCancel={() => { scrollTouch.current = null }} onClickCapture={event => {
+        if (dragged.current) { event.preventDefault(); event.stopPropagation(); dragged.current = false }
+      }}>
+      <div className="month-table">
       {/* Column headers — same grid as day rows */}
       <div className="month-table-heading grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
         <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Data</span>
@@ -104,7 +126,7 @@ export default function MonthColumn({
               {/* Coluna central */}
               <div className="day-mid-value text-center min-w-0">
                 {mode === 'diario' ? <InlineDailyActual day={day} /> : <>
-                <span style={{ '--money-scale': 1.55 / middle.length } as CSSProperties} className={`text-sm font-medium num whitespace-nowrap ${
+                <span className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :
                   mode === 'saida'   ? 'text-red'         :
                   day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'
@@ -115,13 +137,15 @@ export default function MonthColumn({
 
               {/* Saldo */}
               <div className="day-balance text-right">
-                <span style={{ '--money-scale': 1.55 / balance.length } as CSSProperties} className={`text-sm font-semibold num whitespace-nowrap px-1.5 py-0.5 rounded-md ${SALDO_CLASS[color]}`}>
+                <span className={`text-sm font-semibold num whitespace-nowrap px-1.5 py-0.5 rounded-md ${SALDO_CLASS[color]}`}>
                   {balance}
                 </span>
               </div>
             </div>
           )
         })}
+      </div>
+      </div>
       </div>
     </div>
   )

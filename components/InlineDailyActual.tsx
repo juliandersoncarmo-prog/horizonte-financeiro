@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState, type CSSProperties } from 'react'
+import { useRef, useState } from 'react'
 import { Pencil, Check, X } from 'lucide-react'
 import { useDailyEditor, useProjectionUpdate } from './ProjectionProvider'
 import { useRouter } from 'next/navigation'
@@ -47,7 +47,7 @@ export default function InlineDailyActual({ day }: { day: DayResult }) {
       <button disabled={busy} aria-label="Confirmar Diário" title="Confirmar" className="shrink-0 h-7 w-5 flex items-center justify-center text-accent">{busy ? <span aria-hidden="true">…</span> : <Check size={14} />}</button>
       <button type="button" disabled={busy} aria-label="Cancelar Diário" title="Cancelar" onClick={close} className="shrink-0 h-7 w-5 flex items-center justify-center text-text-3"><X size={14} /></button>
     </form> : <div className="daily-display flex items-center justify-center gap-1 h-7 min-w-0">
-      <span style={{ '--money-scale': 1.55 / displayValue.length } as CSSProperties} className={`text-sm font-medium num whitespace-nowrap ${day.diarioRealizado != null ? 'daily-actual text-text font-semibold' : 'text-text-3'}`}>{displayValue}</span>
+      <span className={`text-sm font-medium num whitespace-nowrap ${day.diarioRealizado != null ? 'daily-actual text-text font-semibold' : 'text-text-3'}`}>{displayValue}</span>
       <button ref={pencil} aria-label={`Editar Diário em ${day.date}`} title="Editar Diário" onClick={() => { if (editor.open(day.date)) { setValue(day.diarioRealizado == null ? '' : String(day.diarioRealizado)); setError(''); setNotice('') } }} className="shrink-0 h-7 w-5 flex items-center justify-center text-text-3 hover:text-accent">{notice ? <Check size={12} className="text-green" /> : <Pencil size={12} />}</button>
     </div>}
     {busy && <span role="status" className="sr-only">Salvando Diário…</span>}
