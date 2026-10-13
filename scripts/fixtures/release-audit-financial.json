@@ -1,0 +1,105 @@
+{
+  "settings": [
+    {
+      "id": "384f8794-30dc-455e-acd6-845f9f0f92f3",
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "updated_at": "2026-10-13T15:41:15.486281+00:00",
+      "data_ancora": "2099-01-01",
+      "saldo_abertura": 1000
+    }
+  ],
+  "credit_cards": [
+    {
+      "id": "f85afb9b-d168-44a9-ac20-3de661f79564",
+      "nome": "HF AUDIT card",
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "dia_vencimento": 31
+    }
+  ],
+  "transactions": [
+    {
+      "id": "0441ecc5-fe62-4b9a-9187-228829dd4d56",
+      "data": "2099-01-02",
+      "tipo": "entrada",
+      "valor": 500,
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "categoria": "",
+      "descricao": "HF AUDIT income",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "updated_at": "2026-10-13T15:41:15.486281+00:00",
+      "incluido_diario": false
+    },
+    {
+      "id": "4e82f26f-1dbd-432d-bc96-d33da41252e3",
+      "data": "2099-01-04",
+      "tipo": "saida",
+      "valor": 60,
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "categoria": "",
+      "descricao": "HF AUDIT expense",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "updated_at": "2026-10-13T15:41:15.486281+00:00",
+      "incluido_diario": false
+    }
+  ],
+  "card_invoices": [
+    {
+      "id": "2da6e306-c005-4528-9aa8-5ccb0383555f",
+      "valor": 210,
+      "card_id": "f85afb9b-d168-44a9-ac20-3de661f79564",
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "mes_referencia": "2099-01"
+    },
+    {
+      "id": "6c741b6f-e202-40fc-86f3-69b84828170b",
+      "valor": 150,
+      "card_id": "f85afb9b-d168-44a9-ac20-3de661f79564",
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "mes_referencia": "2099-02"
+    }
+  ],
+  "daily_actuals": [
+    {
+      "id": "f05e0b4f-f086-4462-a3f4-2608de86e60e",
+      "data": "2099-01-01",
+      "valor": 0,
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "created_at": "2026-10-13T15:41:15.486281+00:00"
+    }
+  ],
+  "daily_budgets": [
+    {
+      "id": "06ca7f4c-2319-4bb3-acec-b1fa2d4e1c4c",
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "categoria": "",
+      "descricao": "HF AUDIT daily",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "updated_at": "2026-10-13T15:41:15.486281+00:00",
+      "valor_mensal": 310,
+      "mes_referencia": null
+    }
+  ],
+  "recurring_rules": [
+    {
+      "id": "39045094-37f8-4be1-ade5-6ee5a90e28aa",
+      "tipo": "saida",
+      "ativo": true,
+      "valor": 100,
+      "user_id": "42757424-db19-41d8-b6b6-47deaea68dde",
+      "categoria": "",
+      "descricao": "HF AUDIT rent",
+      "created_at": "2026-10-13T15:41:15.486281+00:00",
+      "dia_do_mes": 6,
+      "frequencia": "mensal",
+      "updated_at": "2026-10-13T15:41:15.486281+00:00",
+      "data_inicio": "2099-01-01",
+      "modo_termino": "ocorrencias",
+      "valor_termino": "2",
+      "incluido_diario": false
+    }
+  ]
+}
