@@ -51,4 +51,10 @@ Sem control-browser disponível no ambiente managed. Conforme fluxo Sites, não 
 Conferir no site no celular: centro do título/número/lápis nos três modos, valores grandes sem scroll lateral, salvar/editar/zerar/remover realizado e observar Salvando → confirmação, abrir Diário logo após salvar, adicionar/editar/excluir orçamento e conferir resumo, swipe e rolagem vertical. Para obter latência real comparável é necessário registrar no mesmo dispositivo/rede o intervalo entre confirmar e ver calendário atualizado, ao menos 10 repetições por versão, sem misturar cold start e sessões aquecidas.
 
 ## Publicação
-Publicação somente no site de testes indicado. Identificadores e resultado terminal serão acrescentados após confirmação nativa do Sites; o source do site mantém suas configurações Vinext próprias.
+Publicação somente no site de testes indicado. Publicação confirmada pelo Sites: **succeeded**, env revision 1 preservada.
+
+- Commit GitHub de implementação: `fa200a3afb612f08e96047c7829a35b0f098ced8`.
+- Source Sites: `212a4b59d11d2e234239f682672e10b178e2e9ad`.
+- Versão: `appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_721729391aa481919873343ab3a9ce50`.
+- Deployment: `appgdep_6acd86d1a550819187fa97ba53aee3c1`.
+- O source do site mantém suas configurações Vinext próprias; arquivos funcionais correspondem à implementação GitHub. Este resultado integra um commit documental posterior, sem novo deploy de código.
