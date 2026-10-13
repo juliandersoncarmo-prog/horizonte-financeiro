@@ -36,3 +36,14 @@ As regras são as mesmas nas quatro larguras solicitadas: até639px, shell limit
 O commit que contém este relatório e a correção está no histórico da branch acima. A publicação do source correspondente no projeto de testes será confirmada pela resposta nativa Sites. Resultado e identificadores finais serão anexados após publicação.
 
 Git push via CLI sem credencial disponível; publicação da branch recuperada pelas operações autenticadas do conector GitHub, sem modificar main.
+
+## Publicação confirmada
+
+- Commit GitHub da implementação: 3365b454493a36c38807a59e5e56bab831c3b57f.
+- Commit source Sites empacotado: 9f153538010a3ec681a06ff9c3fdf04e3294d6a0.
+- Versão: appgprj_6acd25d8d4708191b849f052ba7532ba~appgver_4557fe8324fc8191ad81918a71e67897.
+- Deployment: appgdep_6ace281067fc8191a75891fb64ebc768.
+- Resultado nativo: succeeded, 2026-10-13T12:46:28.298435+00:00.
+- URL: https://horizonte-testes-autenticado.juliandersoncarmo.chatgpt.site.
+
+Atualização posterior deste relatório registra apenas a proveniência; não modifica código nem exige nova publicação. Validação visual com teclado real permanece pendente conforme limites acima.
