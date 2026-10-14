@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (signal.aborted) throw new Error(AUTH_TIMEOUT_MESSAGE)
       if (error) {
+        console.warn('auth.password.failed', { code: error.code ?? 'unknown', status: error.status ?? 0 })
         if (error.code === 'email_not_confirmed') return failure('Confirme seu e-mail antes de entrar.', 401)
         if (error.status === 429) return failure('Muitas tentativas. Aguarde um pouco e tente novamente.', 429)
-        if (error.status && error.status < 500) return failure('E-mail ou senha incorretos. Confira os dados e tente novamente.', 401)
+        if (error.code === 'invalid_credentials') return failure('E-mail ou senha incorretos. Confira os dados e tente novamente.', 401)
         return failure('Não foi possível conectar. Tente novamente.', 503)
       }
       if (!data.session || !data.user) return failure('Não foi possível iniciar a sessão. Tente novamente.', 401)

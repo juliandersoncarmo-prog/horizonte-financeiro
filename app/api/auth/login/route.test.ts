@@ -20,3 +20,10 @@ it('bounds a stuck SDK call, without publishing late session cookies',async()=>{
  const pending=POST(request());await vi.advanceTimersByTimeAsync(10000);const response=await pending;expect(response.status).toBe(503);finish();await Promise.resolve();expect(response.headers.get('set-cookie')).toBeNull()
 })
 it('catches thrown transport failures and accepts a new attempt',async()=>{mock.signIn.mockRejectedValueOnce(new Error('offline'));expect((await POST(request())).status).toBe(503);expect((await POST(request())).status).toBe(200)})
+
+it('does not misreport gateway/API key failures as wrong passwords', async()=>{
+ mock.signIn.mockResolvedValue({data:{},error:{status:401,message:'Invalid API key'}})
+ const response=await POST(request())
+ expect(response.status).toBe(503)
+ expect(await response.text()).not.toContain('incorretos')
+})

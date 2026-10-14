@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { passwordSignIn, withAuthDeadline } from '@/lib/auth-request'
 
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const hash = new URLSearchParams(window.location.hash.slice(1))
+    if (params.has('auth_error') || params.has('error') || hash.has('error')) {
+      queueMicrotask(() => setError('Não foi possível concluir o acesso pelo link. Tente novamente ou solicite um novo link de recuperação.'))
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   async function handleSignIn() {
     if (lock.current) return

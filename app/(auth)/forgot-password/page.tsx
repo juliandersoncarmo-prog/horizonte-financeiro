@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ForgotPasswordPage() {
@@ -9,20 +9,31 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const hash = new URLSearchParams(window.location.hash.slice(1))
+    if (params.has('auth_error') || params.has('error') || hash.has('error')) {
+      queueMicrotask(() => setError('O link de acesso é inválido ou expirou. Solicite um novo link e abra-o no mesmo navegador em que fez o pedido.'))
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
   async function handleReset() {
     setError('')
     if (!email) { setError('Informe seu e-mail.'); return }
     setLoading(true)
+    try {
     const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: window.location.origin + '/auth/callback?next=/reset-password',
     })
-    setLoading(false)
     if (error) {
       setError(error.message)
     } else {
       setSuccess(true)
     }
+    } catch { setError('Falha de conexão. Tente novamente.') }
+    finally { setLoading(false) }
   }
 
   return (

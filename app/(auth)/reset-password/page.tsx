@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,8 +13,24 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+    const invalid = () => { if (active) setError('Link inválido ou expirado. Volte à recuperação e solicite um novo link.') }
+    const params = new URLSearchParams(window.location.search)
+    const hash = new URLSearchParams(window.location.hash.slice(1))
+    if (params.has('error') || hash.has('error')) invalid()
+    else supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return
+      if (error || !data.user) invalid()
+      else setReady(true)
+    }).catch(invalid)
+    return () => { active = false }
+  }, [])
 
   async function handleSave() {
+    if (!ready) return
     setError('')
     if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return }
     if (password !== confirmPassword) { setError('As senhas não coincidem.'); return }
@@ -113,7 +129,7 @@ export default function ResetPasswordPage() {
                 </div>
               </div>
 
-              <PrimaryBtn onClick={handleSave} loading={loading}>
+              <PrimaryBtn onClick={handleSave} loading={loading || !ready}>
                 {loading ? 'Salvando…' : 'Salvar nova senha'}
               </PrimaryBtn>
             </>

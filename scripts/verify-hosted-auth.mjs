@@ -9,3 +9,10 @@ assert(!bundles.includes('NEXT_PUBLIC_SUPABASE_URL')&&!bundles.includes('NEXT_PU
 assert(bundles.includes('https://hsvjkbfpvmtnehjbwtgr.supabase.co'),'Authorized test project URL must be embedded in browser build')
 assert(bundles.includes('/api/auth/login'),'Password login endpoint missing from browser build')
 console.log('PASS: public Supabase config compiled for authorized test project; bounded password endpoint included')
+
+const expected=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+assert(expected && expected !== 'null' && expected !== 'undefined', 'Supply the public project key to verify the build')
+const server=files(resolve(process.argv[2]??'.','dist/server')).map(file=>readFileSync(file,'utf8')).join('\n')
+assert(bundles.includes(expected), 'Browser key differs from authorized project key')
+assert(server.includes(expected), 'Server key differs from authorized project key; runtime changes cannot repair baked build values')
+console.log('PASS: server and browser both contain the verified public project key')
