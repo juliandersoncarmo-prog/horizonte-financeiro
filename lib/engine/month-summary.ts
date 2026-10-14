@@ -12,7 +12,7 @@ export function monthSummary(month: MonthResult) {
     }
   }
   return {
-    resultado: (Math.round(month.totalEntradas * 100) - Math.round(month.totalSaidas * 100)) / 100,
+    resultado: (Math.round(month.totalEntradas * 100) - Math.round(month.totalSaidas * 100) - Math.round((month.totalInvestimentos ?? 0) * 100)) / 100,
     avulsas: cents.avulsas / 100, recorrentes: cents.recorrentes / 100, cartoes: cents.cartoes / 100,
     diarioPrevisto: cents.diarioPrevisto / 100, diarioRealizado: cents.diarioRealizado / 100,
   }

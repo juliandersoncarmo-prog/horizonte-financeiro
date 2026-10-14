@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "id": "aa0e600f-df33-4c0b-99be-169e24f2ee8f",
+      "tipo": "investimento",
+      "valor": 50,
+      "categoria": "",
+      "descricao": "HF synthetic persisted",
+      "dia_do_mes": 5,
+      "frequencia": "mensal",
+      "data_inicio": "2099-09-01",
+      "modo_termino": "nunca",
+      "valor_termino": null
+    }
+  ],
+  "exceptions": [
+    {
+      "rule_id": "aa0e600f-df33-4c0b-99be-169e24f2ee8f",
+      "mes_referencia": "2099-10"
+    }
+  ],
+  "endings": [
+    {
+      "rule_id": "aa0e600f-df33-4c0b-99be-169e24f2ee8f",
+      "mes_inicio": "2099-11"
+    }
+  ]
+}

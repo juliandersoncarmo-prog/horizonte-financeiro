@@ -99,6 +99,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
   const { settings, recurringRules, transactions, dailyBudgets, horizonMonths } = input
 
   const excluded = new Set((input.recurringExceptions ?? []).map(e => `${e.rule_id}:${e.mes_referencia}`))
+  const endings = new Map((input.recurringEndings ?? []).map(e => [e.rule_id, e.mes_inicio]))
   const invoices = cardEvents(input.cards ?? [])
   function indexByDate<T extends { data: string }>(rows: T[]) {
     const result = new Map<string, T[]>()
@@ -136,6 +137,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
 
     let totalEntradas = 0
     let totalSaidas = 0
+    let totalInvestimentos = 0
     const days: DayResult[] = []
 
     for (let d = 1; d <= N; d++) {
@@ -149,7 +151,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
       const events: DayEvent[] = []
 
       for (const rule of recurringRules) {
-        if (excluded.has(`${rule.id}:${label}`) || !isRuleActiveOnDate(rule, dateISO, year, month, d)) continue
+        if ((endings.has(rule.id) && label >= endings.get(rule.id)!) || excluded.has(`${rule.id}:${label}`) || !isRuleActiveOnDate(rule, dateISO, year, month, d)) continue
 
         events.push({
           ruleId: rule.id,
@@ -163,6 +165,9 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         if (rule.tipo === 'entrada') {
           saldo = money(saldo + money(rule.valor))
           totalEntradas = money(totalEntradas + money(rule.valor))
+        } else if (rule.tipo === 'investimento') {
+          saldo = money(saldo - money(rule.valor))
+          totalInvestimentos = money(totalInvestimentos + money(rule.valor))
         } else if (!rule.incluido_diario) {
           saldo = money(saldo - money(rule.valor))
           totalSaidas = money(totalSaidas + money(rule.valor))
@@ -183,6 +188,9 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         if (tx.tipo === 'entrada') {
           saldo = money(saldo + money(tx.valor))
           totalEntradas = money(totalEntradas + money(tx.valor))
+        } else if (tx.tipo === 'investimento') {
+          saldo = money(saldo - money(tx.valor))
+          totalInvestimentos = money(totalInvestimentos + money(tx.valor))
         } else if (!tx.incluido_diario) {
           saldo = money(saldo - money(tx.valor))
           totalSaidas = money(totalSaidas + money(tx.valor))
@@ -212,6 +220,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
         diarioRealizado,
         inSum,
         outSum,
+        investmentSum: money(events.filter(e => e.tipo === 'investimento').reduce((a, e) => a + e.valor, 0)),
         saldo,
         isToday: dateISO === todayISO,
         isFirstNeg,
@@ -227,6 +236,7 @@ export function runProjection(input: ProjectionInput): ProjectionResult {
       saldoFechamento: saldo,
       totalEntradas,
       totalSaidas,
+      totalInvestimentos,
     })
   }
 

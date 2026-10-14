@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ exceptions: vi.fn(), settings: vi.fn(), rules: vi.fn(), transactions: vi.fn(), budgets: vi.fn(), actuals: vi.fn(), cards: vi.fn(), auth: vi.fn() }))
-vi.mock('@/lib/db/queries', () => ({ getRecurringExceptions: mocks.exceptions, getUserSettings: mocks.settings, getRecurringRules: mocks.rules, getTransactions: mocks.transactions, getDailyBudgets: mocks.budgets, getDailyActuals: mocks.actuals }))
+const mocks = vi.hoisted(() => ({ endings: vi.fn(), exceptions: vi.fn(), settings: vi.fn(), rules: vi.fn(), transactions: vi.fn(), budgets: vi.fn(), actuals: vi.fn(), cards: vi.fn(), auth: vi.fn() }))
+vi.mock('@/lib/db/queries', () => ({ getRecurringEndings: mocks.endings, getRecurringExceptions: mocks.exceptions, getUserSettings: mocks.settings, getRecurringRules: mocks.rules, getTransactions: mocks.transactions, getDailyBudgets: mocks.budgets, getDailyActuals: mocks.actuals }))
 vi.mock('./card-actions', () => ({ getCreditCards: mocks.cards }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: mocks.auth } }) }))
 vi.mock('@/lib/supabase/service', () => ({ createUserDataClient: vi.fn() }))
@@ -10,7 +10,7 @@ import { getProjectionData } from './actions'
 beforeEach(() => {
   vi.clearAllMocks(); mocks.auth.mockResolvedValue({ data: { user: { id: 'owner' } } })
   mocks.settings.mockResolvedValue({ saldo_abertura: 1000, data_ancora: '2026-01-01' })
-  for (const method of [mocks.exceptions, mocks.rules, mocks.transactions, mocks.budgets, mocks.actuals]) method.mockResolvedValue([])
+  for (const method of [mocks.endings, mocks.exceptions, mocks.rules, mocks.transactions, mocks.budgets, mocks.actuals]) method.mockResolvedValue([])
   mocks.cards.mockResolvedValue({ enabled: true, cards: [{ id: 'card', nome: 'Teste', dia_vencimento: 31, invoices: [{ id: 'invoice', mes_referencia: '2026-02', valor: 123 }] }] })
 })
 it('Server Action inclui fatura uma vez em janela distante mantendo saldo anterior', async () => {

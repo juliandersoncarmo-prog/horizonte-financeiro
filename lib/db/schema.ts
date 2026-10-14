@@ -16,7 +16,7 @@ import { sql } from 'drizzle-orm'
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export const tipoTransacaoEnum = pgEnum('tipo_transacao', ['entrada', 'saida'])
+export const tipoTransacaoEnum = pgEnum('tipo_transacao', ['entrada', 'saida', 'investimento'])
 export const frequenciaEnum    = pgEnum('frequencia',     ['mensal', 'quinzenal', 'semanal', 'unico'])
 export const modoTerminoEnum   = pgEnum('modo_termino',   ['nunca', 'horizonte', 'ocorrencias', 'data'])
 
@@ -130,3 +130,9 @@ export const recurringExceptionsTable = pgTable('recurring_exceptions', {
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex('recurring_exceptions_identity').on(t.user_id,t.rule_id,t.mes_referencia),
   foreignKey({ columns: [t.user_id,t.rule_id], foreignColumns: [recurringRulesTable.user_id,recurringRulesTable.id] }).onDelete('cascade')])
+
+export const recurringEndingsTable = pgTable('recurring_endings', {
+ user_id: uuid('user_id').notNull(), rule_id: uuid('rule_id').notNull(),
+ mes_inicio: text('mes_inicio').notNull(), created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex('recurring_endings_identity').on(t.user_id,t.rule_id),
+ foreignKey({columns:[t.user_id,t.rule_id],foreignColumns:[recurringRulesTable.user_id,recurringRulesTable.id]}).onDelete('cascade')])

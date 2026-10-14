@@ -6,9 +6,9 @@ import DayDetail from './DayDetail'
 import CreditCardsModal from './CreditCardsModal'
 import { ProjectionProvider } from './ProjectionProvider'
 import { runProjection } from '@/lib/engine/projection'
-const m=vi.hoisted(()=>({cancel:vi.fn(),del:vi.fn(),rule:vi.fn(),refresh:vi.fn(),cards:vi.fn()}))
+const m=vi.hoisted(()=>({end:vi.fn(),cancel:vi.fn(),del:vi.fn(),rule:vi.fn(),refresh:vi.fn(),cards:vi.fn()}))
 vi.mock('next/navigation',()=>({useRouter:()=>({refresh:m.refresh})}))
-vi.mock('@/app/actions',()=>({cancelRecurringMonth:m.cancel,deleteTransaction:m.del,deleteRecurringRule:m.rule,updateTransaction:vi.fn(),updateRecurringRule:vi.fn(),addTransaction:vi.fn(),addRecurringRule:vi.fn()}))
+vi.mock('@/app/actions',()=>({endRecurringFromMonth:m.end,cancelRecurringMonth:m.cancel,deleteTransaction:m.del,deleteRecurringRule:m.rule,updateTransaction:vi.fn(),updateRecurringRule:vi.fn(),addTransaction:vi.fn(),addRecurringRule:vi.fn()}))
 vi.mock('@/app/card-actions',()=>({getCreditCards:m.cards,createCreditCard:vi.fn(),deleteCreditCard:vi.fn(),deleteCardInvoice:vi.fn(),saveCardInvoice:vi.fn(),updateCreditCard:vi.fn()}))
 vi.stubGlobal('React',React);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
 let host:HTMLDivElement,root:ReturnType<typeof createRoot>
@@ -16,7 +16,7 @@ const projection=runProjection({settings:{saldo_abertura:100,data_ancora:'2026-1
 const day=projection.months[0].days[0]
 beforeEach(()=>{vi.clearAllMocks();m.del.mockResolvedValue({success:true});m.cards.mockResolvedValue({enabled:true,cards:[]});host=document.createElement('div');document.body.append(host);root=createRoot(host)})
 afterEach(async()=>{await act(()=>root.unmount());host.remove()})
-function button(text:string){return [...document.querySelectorAll('button')].find(b=>b.textContent===text || b.title===text)!}
+function button(text:string){return [...document.querySelectorAll('button')].find(b=>b.textContent===text || b.querySelector('strong')?.textContent===text || b.title===text)!}
 async function click(text:string){await act(()=>{button(text).focus();button(text).click()})}
 async function render(){await act(()=>root.render(<DayDetail day={day} onClose={vi.fn()} />));await click('Editar')}
 it('removes Diário detail block and requires explicit deletion confirmation',async()=>{
@@ -47,18 +47,18 @@ it('card manager uses projection snapshot and does not issue another read on ope
  expect(document.body.textContent).not.toContain('Faturas de Inicial');expect(m.cards).not.toHaveBeenCalled()
 })
 
-it('rule confirmation describes past and future scope and calls whole-rule deletion',async()=>{
- m.rule.mockResolvedValue({success:true})
+it('editor cancellation preserves past and requires a final confirmation',async()=>{
+ m.end.mockResolvedValue({success:true})
  const event={...day.events[0],id:undefined,ruleId:'22222222-2222-4222-8222-222222222222'}
- await act(()=>root.render(<DayDetail day={{...day,events:[event]}} onClose={vi.fn()} />));await click('Editar');await click('Excluir regra recorrente')
- expect(document.body.textContent).toContain('passadas e futuras');expect(m.rule).not.toHaveBeenCalled()
- await click('Toda a recorrência');expect(m.rule).toHaveBeenCalledWith(event.ruleId,'all-occurrences');expect(m.del).not.toHaveBeenCalled()
+ await act(()=>root.render(<DayDetail day={{...day,events:[event]}} onClose={vi.fn()} />));await click('Editar');await click('Cancelar recorrência')
+ expect(document.body.textContent).toContain('Outubro de 2026');expect(document.body.textContent).toContain('Preserva os meses anteriores.');expect(m.end).not.toHaveBeenCalled()
+ await click('Deste mês em diante');expect(m.end).not.toHaveBeenCalled();await click('Confirmar cancelamento')
+ expect(m.end).toHaveBeenCalledWith(event.ruleId,day.date);expect(m.rule).not.toHaveBeenCalled();expect(m.del).not.toHaveBeenCalled()
 })
-
 it('cancels the selected civil month without deleting the rule', async()=> {
  m.cancel.mockResolvedValue({success:true})
  const event={...day.events[0],id:undefined,ruleId:'22222222-2222-4222-8222-222222222222'}
  await act(()=>root.render(<DayDetail day={{...day,events:[event]}} onClose={vi.fn()} />));await click('Excluir')
- expect(m.cancel).not.toHaveBeenCalled();await click('Somente este mês')
+ expect(m.cancel).not.toHaveBeenCalled();await click('Somente este mês');expect(m.cancel).not.toHaveBeenCalled();await click('Confirmar cancelamento')
  expect(m.cancel).toHaveBeenCalledWith(event.ruleId,day.date);expect(m.rule).not.toHaveBeenCalled();expect(m.refresh).toHaveBeenCalledTimes(1)
 })

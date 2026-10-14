@@ -9,7 +9,7 @@ import MobileColumnMode from './MobileColumnMode'
 import type { MonthResult, DayResult } from '@/types'
 import { balanceColor, formatBRL, monthLabel } from '@/lib/engine/projection'
 
-export type Mode = 'entrada' | 'saida' | 'diario'
+export type Mode = 'entrada' | 'saida' | 'investimento' | 'diario'
 
 const SALDO_CLASS: Record<string, string> = {
   green:        'text-green bg-green-soft',
@@ -24,6 +24,7 @@ const WEEKDAY = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 function midValue(day: DayResult, mode: Mode): string {
   if (mode === 'entrada') return day.inSum  > 0 ? `+${formatBRL(day.inSum)}`  : '—'
+  if (mode === 'investimento') return (day.investmentSum ?? 0) > 0 ? `−${formatBRL(day.investmentSum!)}` : '—'
   if (mode === 'saida')   return day.outSum > 0 ? `−${formatBRL(day.outSum)}` : '—'
   return day.diarioRealizado != null || day.diario > 0 ? `−${formatBRL(day.diario)}` : '—'
 }
@@ -89,7 +90,7 @@ export default function MonthColumn({
       <div className="month-table-heading grid grid-cols-[72px_1fr_96px] items-center px-3 py-1.5 bg-surface-2 border-b border-border flex-none">
         <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Data</span>
         <div className="flex justify-center">
-          <ChoiceField anchored label={`Valores exibidos em ${monthLabel(month.year, month.month)}`} value={mode} onChange={value => onModeChange(value as Mode)} options={[{value:'diario',label:'Diário'},{value:'entrada',label:'Entradas'},{value:'saida',label:'Saídas'}]} className="desktop-column-mode text-xs font-semibold text-text-3 bg-transparent uppercase tracking-wide" />
+          <ChoiceField anchored label={`Valores exibidos em ${monthLabel(month.year, month.month)}`} value={mode} onChange={value => onModeChange(value as Mode)} options={[{value:'diario',label:'Diário'},{value:'entrada',label:'Entradas'},{value:'saida',label:'Saídas'},{value:'investimento',label:'Investimentos'}]} className="desktop-column-mode text-xs font-semibold text-text-3 bg-transparent uppercase tracking-wide" />
           <MobileColumnMode mode={mode} onChange={onModeChange} month={monthLabel(month.year, month.month)} />
         </div>
         <span className="text-right text-xs font-semibold text-text-3 uppercase tracking-wide">Saldo</span>
@@ -128,6 +129,7 @@ export default function MonthColumn({
                 {mode === 'diario' ? <InlineDailyActual day={day} /> : <>
                 <span className={`text-sm font-medium num whitespace-nowrap ${
                   mode === 'entrada' ? 'text-green-light' :
+                  mode === 'investimento' ? 'text-accent' :
                   mode === 'saida'   ? 'text-red'         :
                   day.diarioRealizado != null ? 'text-text font-semibold' : 'text-text-3'
                 }`}>

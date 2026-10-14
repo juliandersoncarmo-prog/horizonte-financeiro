@@ -17,7 +17,7 @@ const trigger = () => host.querySelector<HTMLButtonElement>('.column-mode-trigge
 async function open() { await act(() => trigger().click()) }
 it('selects all modes and returns focus to trigger without a native select',async()=> {
  expect(host.querySelector('select')).toBeNull()
- for(const label of ['Entradas','Saídas','Diário']) {
+ for(const label of ['Entradas','Saídas','Investimentos','Diário']) {
   await open()
   await act(() => [...host.querySelectorAll<HTMLButtonElement>('[role=menuitemradio]')].find(item=>item.textContent===label)!.click())
   expect(trigger().textContent).toBe(label);expect(trigger().getAttribute('aria-expanded')).toBe('false');expect(document.activeElement).toBe(trigger())

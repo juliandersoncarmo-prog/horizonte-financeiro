@@ -22,6 +22,7 @@ export default function MonthlySummaryModal({ onClose }: { onClose: () => void }
   const metrics = month && summary ? [
     { label: 'Saldo no início do mês', value: month.saldoAbertura, Icon: Wallet, color: summaryColor(month.saldoAbertura) },
     { label: 'Entradas', value: month.totalEntradas, Icon: ArrowDownLeft, color: 'text-green' },
+    { label: 'Investimentos', value: month.totalInvestimentos ?? 0, Icon: Landmark, color: 'text-accent' },
     { label: 'Saídas', value: month.totalSaidas, Icon: ArrowUpRight, color: 'text-red' },
     { label: summary.resultado > 0 ? 'Sobrou no mês' : summary.resultado < 0 ? 'Faltou no mês' : 'Resultado do mês', value: summary.resultado, Icon: TrendingUp, color: summaryColor(summary.resultado) },
   ] : []

@@ -8,6 +8,7 @@ const options: { value: Mode; label: string }[] = [
   { value: 'diario', label: 'Diário' },
   { value: 'entrada', label: 'Entradas' },
   { value: 'saida', label: 'Saídas' },
+  { value: 'investimento', label: 'Investimentos' },
 ]
 
 export default function MobileColumnMode({ mode, onChange, month }: { mode: Mode; onChange: (mode: Mode) => void; month: string }) {

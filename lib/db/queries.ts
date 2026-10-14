@@ -93,3 +93,10 @@ export async function getRecurringExceptions(userId: string) {
   if (error) throw new Error('Não foi possível carregar os cancelamentos de recorrências.')
   return data ?? []
 }
+
+export async function getRecurringEndings(userId: string) {
+  const db = await createUserDataClient()
+  const { data, error } = await db.from('recurring_endings').select('rule_id,mes_inicio').eq('user_id', userId)
+  if (error) throw new Error('Não foi possível carregar os encerramentos de recorrências.')
+  return data ?? []
+}

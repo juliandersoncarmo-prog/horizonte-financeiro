@@ -10,7 +10,7 @@ type Mode     = 'avulsa' | 'recorrente'
 type Duracao  = 'nunca' | 'ocorrencias'
 
 interface Props {
-  tipo: 'entrada' | 'saida'
+  tipo: 'entrada' | 'saida' | 'investimento'
   onClose: () => void
   defaultDate?: string
 }
@@ -72,8 +72,9 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   }
 
   const isEntrada  = tipo === 'entrada'
-  const titleColor = isEntrada ? 'text-green' : 'text-red'
-  const btnClass   = isEntrada
+  const title = tipo === 'investimento' ? 'Novo investimento' : isEntrada ? 'Nova entrada' : 'Nova saída'
+  const titleColor = tipo === 'investimento' ? 'text-accent' : isEntrada ? 'text-green' : 'text-red'
+  const btnClass   = tipo === 'investimento' ? 'bg-accent text-white hover:opacity-90' : isEntrada
     ? 'bg-green text-white hover:opacity-90'
     : 'bg-red text-white hover:opacity-90'
 
@@ -81,13 +82,13 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
   const labelClass = 'text-xs font-semibold uppercase tracking-widest text-text-3 block mb-1'
 
   return (
-    <ModalPortal onClose={() => { if (!loading) onClose() }} label={isEntrada ? 'Nova entrada' : 'Nova saída'}>
+    <ModalPortal onClose={() => { if (!loading) onClose() }} label={title}>
       <div className="relative bg-surface rounded-2xl shadow-xl border border-border w-full p-6">
 
         {/* Header */}
         <div className="dialog-heading flex items-center justify-between mb-5">
           <h2 className={`text-base font-semibold ${titleColor}`}>
-            {isEntrada ? '+ Nova entrada' : '+ Nova saída'}
+            {`+ ${title}`}
           </h2>
           <button aria-label="Fechar" disabled={loading} onClick={onClose} className="text-text-3 hover:text-text transition-colors">
             <X className="w-5 h-5" />
@@ -126,7 +127,7 @@ export default function AddTransactionModal({ tipo, onClose, defaultDate }: Prop
                 required
                 value={descricao}
                 onChange={e => setDescricao(e.target.value)}
-                placeholder={tipo === 'entrada' ? 'Ex: Salário, Freelance...' : 'Ex: Aluguel, Conta de luz...'}
+                placeholder={tipo === 'investimento' ? 'Ex: Aporte mensal...' : tipo === 'entrada' ? 'Ex: Salário, Freelance...' : 'Ex: Aluguel, Conta de luz...'}
                 className={fieldClass}
               />
             </div>

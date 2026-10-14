@@ -17,9 +17,9 @@ it('deletes only selected transaction with session owner and returning verificat
   expect(await deleteTransaction(id)).toEqual({success:true})
   expect(m.calls).toEqual([['from','transactions'],['delete'],['eq','id',id],['eq','user_id','owner'],['select','id']])
 })
-it('rule deletion requires explicit all-occurrences scope',async()=>{
+it('legacy whole-rule deletion is blocked for stale clients',async()=>{
   expect((await deleteRecurringRule(id,'occurrence' as 'all-occurrences')).success).toBe(false);expect(m.db).not.toHaveBeenCalled()
-  expect((await deleteRecurringRule(id,'all-occurrences')).success).toBe(true);expect(m.calls[0]).toEqual(['from','recurring_rules'])
+  expect((await deleteRecurringRule(id,'all-occurrences')).success).toBe(false);expect(m.db).not.toHaveBeenCalled()
 })
 it('blocks absent session before database',async()=>{
   m.auth.mockResolvedValue({data:{user:null}})

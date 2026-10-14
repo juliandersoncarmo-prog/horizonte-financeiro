@@ -1,4 +1,4 @@
-export type TipoTransacao = 'entrada' | 'saida'
+export type TipoTransacao = 'entrada' | 'saida' | 'investimento'
 export type Frequencia    = 'mensal' | 'quinzenal' | 'semanal' | 'unico'
 export type ModoTermino   = 'nunca' | 'horizonte' | 'ocorrencias' | 'data'
 
@@ -51,6 +51,7 @@ export interface DayResult {
   diarioRealizado?: number | null
   diario: number             // gasto diário proporcional do orçamento variável
   inSum: number
+  investmentSum?: number
   outSum: number
   saldo: number
   isToday: boolean
@@ -65,6 +66,7 @@ export interface MonthResult {
   saldoAbertura: number
   saldoFechamento: number
   totalEntradas: number
+  totalInvestimentos?: number
   totalSaidas: number
 }
 
@@ -90,6 +92,7 @@ export interface Transaction {
 export interface RecurringException { rule_id: string; mes_referencia: string }
 
 export interface ProjectionInput {
+  recurringEndings?: { rule_id: string; mes_inicio: string }[]
   recurringExceptions?: RecurringException[]
   cards?: CreditCard[]
   settings: Settings

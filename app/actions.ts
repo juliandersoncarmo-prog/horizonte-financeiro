@@ -3,7 +3,7 @@
 import { getCreditCards } from './card-actions'
 import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
-import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals, getRecurringExceptions } from '@/lib/db/queries'
+import { getUserSettings, getRecurringRules, getTransactions, getDailyBudgets, getDailyActuals, getRecurringExceptions, getRecurringEndings } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
 import { createUserDataClient } from '@/lib/supabase/service'
 import { runProjection, projectionHorizon } from '@/lib/engine/projection'
@@ -27,7 +27,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
   try {
     const userId = await getAuthenticatedUserId()
 
-    const [settings, rawRules, transactions, rawBudgets, dailyActuals, cardData, recurringExceptions] = await Promise.all([
+    const [settings, rawRules, transactions, rawBudgets, dailyActuals, cardData, recurringExceptions, recurringEndings] = await Promise.all([
       getUserSettings(userId),
       getRecurringRules(userId),
       getTransactions(userId),
@@ -35,6 +35,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       getDailyActuals(userId),
       getCreditCards(),
       getRecurringExceptions(userId),
+      getRecurringEndings(userId),
     ])
 
 
@@ -75,7 +76,7 @@ export async function getProjectionData(startDate: string, months: number = 4): 
       data: t.data,
     }))
 
-    const inputSnapshot: ProjectionInput = { recurringExceptions, cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months), todayISO: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()) }
+    const inputSnapshot: ProjectionInput = { recurringEndings, recurringExceptions, cards: cardData.cards, settings: effectiveSettings, recurringRules, transactions: mappedTransactions, dailyBudgets, dailyActuals, horizonMonths: projectionHorizon(effectiveSettings.data_ancora, startDate, months), todayISO: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Fortaleza' }).format(new Date()) }
     const result = runProjection(inputSnapshot)
     return { ...result, inputSnapshot, cardData, editorData: { recurringRules, dailyBudgets } }
   } catch (err) {
@@ -86,13 +87,13 @@ export async function getProjectionData(startDate: string, months: number = 4): 
 
 export async function addTransaction(formData: {
   incluido_diario?: boolean
-  tipo: 'entrada' | 'saida'
+  tipo: 'entrada' | 'saida' | 'investimento'
   valor: number
   descricao: string
   data: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!validMoney(formData.valor) || !['entrada', 'saida'].includes(formData.tipo)
+    if (!validMoney(formData.valor) || !['entrada', 'saida', 'investimento'].includes(formData.tipo)
       || typeof formData.descricao !== 'string' || !formData.descricao.trim()
       || !/^\d{4}-\d{2}-\d{2}$/.test(formData.data)
       || !Number.isFinite(Date.parse(formData.data + 'T00:00:00Z'))
@@ -173,7 +174,7 @@ export async function updateRecurringRule(
 
 export async function addRecurringRule(formData: {
   incluido_diario?: boolean
-  tipo: 'entrada' | 'saida'
+  tipo: 'entrada' | 'saida' | 'investimento'
   valor: number
   descricao: string
   dia_do_mes: number
@@ -182,7 +183,7 @@ export async function addRecurringRule(formData: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     if (!validMoney(formData.valor) || !validDueDay(formData.dia_do_mes)
-      || !['entrada', 'saida'].includes(formData.tipo)
+      || !['entrada', 'saida', 'investimento'].includes(formData.tipo)
       || typeof formData.descricao !== 'string' || !formData.descricao.trim()
       || !['nunca', 'ocorrencias'].includes(formData.modo_termino)
       || (formData.modo_termino === 'ocorrencias' && (!/^\d+$/.test(formData.valor_termino ?? '')
@@ -407,9 +408,19 @@ async function deleteOwnedRecord(table: 'transactions' | 'recurring_rules', id: 
   } catch { return { success: false, error: 'Não foi possível excluir. Verifique sua sessão e tente novamente.' } }
 }
 export async function deleteTransaction(id: string) { return deleteOwnedRecord('transactions', id) }
-export async function deleteRecurringRule(id: string, scope: 'all-occurrences') {
-  if (scope !== 'all-occurrences') return { success: false, error: 'Confirme a exclusão da regra e de todas as suas ocorrências.' }
-  return deleteOwnedRecord('recurring_rules', id)
+export async function deleteRecurringRule(_id: string, _scope: 'all-occurrences') {
+  void _id; void _scope
+  return { success: false, error: 'Recarregue e selecione a competência para cancelar a recorrência.' }
+}
+export async function endRecurringFromMonth(id: string, date: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !validCivilDate(date)) return { success: false, error: 'Recorrência inválida.' }
+  try {
+    await getAuthenticatedUserId()
+    const db = await createUserDataClient()
+    const { data, error } = await db.rpc('end_recurring_from_month', { p_rule_id: id, p_month: date.slice(0,7) })
+    if (error || !data) return { success: false, error: 'Não foi possível confirmar o encerramento. Recarregue antes de tentar novamente.' }
+    return { success: true }
+  } catch { return { success: false, error: 'Não foi possível confirmar o encerramento. Verifique sua sessão e recarregue.' } }
 }
 
 export async function getInitialSettings() { return getUserSettings(await getAuthenticatedUserId()) }

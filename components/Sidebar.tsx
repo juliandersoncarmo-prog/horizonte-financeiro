@@ -29,7 +29,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
   const [menuOpen, setMenuOpen] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
-  const [modal,       setModal]       = useState<'entrada' | 'saida' | null>(null)
+  const [modal,       setModal]       = useState<'entrada' | 'saida' | 'investimento' | null>(null)
   const [showDiario,  setShowDiario]  = useState(false)
   const [showCards, setShowCards] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
@@ -96,6 +96,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           <TrendingDown className="w-[18px] h-[18px] flex-none" />
           + Saída
         </button>
+
+        <button onClick={() => setModal('investimento')} className={navBtn(false)}><TrendingUp className="w-[18px] h-[18px] flex-none text-accent" />+ Investimento</button>
 
         <button
           onClick={() => setShowDiario(true)}
@@ -184,6 +186,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       <div className="bg-surface p-5 rounded-2xl border border-border">
         <div className="flex items-center justify-between mb-4"><h2 className="font-semibold text-text">Novo lançamento</h2><button type="button" aria-label="Fechar opções" onClick={() => setShowAdd(false)} className="p-3"><X size={20} /></button></div>
         <button type="button" className="mobile-new-entry" onClick={() => { setShowAdd(false); setModal('entrada') }}><TrendingUp size={22} />Nova entrada</button>
+        <button type="button" className="mobile-new-investment" onClick={() => { setShowAdd(false); setModal('investimento') }}><TrendingUp size={22} />Novo investimento</button>
         <button type="button" className="mobile-new-expense" onClick={() => { setShowAdd(false); setModal('saida') }}><TrendingDown size={22} />Nova saída</button>
       </div>
     </ModalPortal>}
