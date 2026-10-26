@@ -136,3 +136,22 @@ export const recurringEndingsTable = pgTable('recurring_endings', {
  mes_inicio: text('mes_inicio').notNull(), created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex('recurring_endings_identity').on(t.user_id,t.rule_id),
  foreignKey({columns:[t.user_id,t.rule_id],foreignColumns:[recurringRulesTable.user_id,recurringRulesTable.id]}).onDelete('cascade')])
+
+// SQL migration is authoritative for checks, auth FKs, RLS and aggregate triggers.
+export const expenseCategoriesTable = pgTable('expense_categories', {
+ id: uuid('id').primaryKey().default(sql`gen_random_uuid()`), user_id: uuid('user_id').notNull(),
+ name: text('name').notNull(), created_at: timestamp('created_at', {withTimezone:true}).notNull().defaultNow(),
+}, t => [uniqueIndex('expense_categories_owner_identity').on(t.user_id,t.id)])
+export const dailyExpenseDaysTable = pgTable('daily_expense_days', {
+ user_id: uuid('user_id').notNull(), expense_date: date('expense_date').notNull(),
+ manual_adjustment: numeric('manual_adjustment',{precision:15,scale:2}), legacy_actual: numeric('legacy_actual',{precision:15,scale:2}),
+ reconciled_at: timestamp('reconciled_at',{withTimezone:true}).notNull().defaultNow(),
+}, t => [uniqueIndex('daily_expense_days_identity').on(t.user_id,t.expense_date)])
+export const dailyExpensesTable = pgTable('daily_expenses', {
+ id: uuid('id').primaryKey().default(sql`gen_random_uuid()`), user_id: uuid('user_id').notNull(),
+ description: text('description').notNull(), amount: numeric('amount',{precision:15,scale:2}).notNull(),
+ category_id: uuid('category_id'), expense_date: date('expense_date').notNull(),
+ created_at: timestamp('created_at',{withTimezone:true}).notNull().defaultNow(), updated_at: timestamp('updated_at',{withTimezone:true}).notNull().defaultNow(),
+}, t => [index('daily_expenses_owner_date').on(t.user_id,t.expense_date,t.created_at,t.id),
+ foreignKey({columns:[t.user_id,t.category_id],foreignColumns:[expenseCategoriesTable.user_id,expenseCategoriesTable.id]}),
+ foreignKey({columns:[t.user_id,t.expense_date],foreignColumns:[dailyExpenseDaysTable.user_id,dailyExpenseDaysTable.expense_date]})])

@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /preview-dist/
+
+/supabase/.temp/
+/tests/expenses-browser/node_modules/
