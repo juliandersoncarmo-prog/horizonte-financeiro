@@ -107,6 +107,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           Diário
         </button>
 
+        <Link href="/gastos-do-diario" className={navBtn(pathname === '/gastos-do-diario')}><CalendarDays className="w-[18px] h-[18px] flex-none" />Gastos do Diário</Link>
+
         <button onClick={() => setShowCards(true)} className={navBtn(false)}>
           <CreditCard className="w-[18px] h-[18px] flex-none" />
           Cartões
