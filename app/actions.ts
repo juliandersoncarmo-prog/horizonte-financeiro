@@ -264,6 +264,13 @@ export async function resetAllData(): Promise<{ success: boolean; error?: string
   try {
     const userId = await getAuthenticatedUserId()
     const supabase = await createUserDataClient()
+    if (process.env.GASTOS_DIARIO_ENABLED === 'true') {
+      // Respect aggregate triggers and FK order before the existing reset flow.
+      for (const table of ['daily_expenses', 'daily_expense_days', 'expense_categories']) {
+        const { error } = await supabase.from(table).delete().eq('user_id', userId)
+        if (error) return { success: false, error: 'Não foi possível excluir os gastos detalhados.' }
+      }
+    }
     const results = await Promise.all([
       ...(process.env.CARTOES_ENABLED === 'true' ? [supabase.from('credit_cards').delete().eq('user_id', userId)] : []),
       supabase.from('transactions').delete().eq('user_id', userId),
@@ -384,13 +391,13 @@ export async function saveDailyActual(data: string, valor: number | null): Promi
     const db = await createUserDataClient()
     if (valor === null) {
       const { error } = await db.from('daily_actuals').delete().eq('user_id', userId).eq('data', data)
-      if (error) return { success: false, error: 'Não foi possível salvar o Diário.' }
+      if (error) return { success: false, error: error.message?.includes('gastos detalhados') ? error.message : 'Não foi possível salvar o Diário.' }
       return { success: true, actual: null }
     }
     const { data: saved, error } = await db.from('daily_actuals')
       .upsert({ user_id: userId, data, valor }, { onConflict: 'user_id,data' })
       .select('data,valor').single()
-    if (error || !saved) return { success: false, error: 'Não foi possível salvar o Diário.' }
+    if (error || !saved) return { success: false, error: error?.message?.includes('gastos detalhados') ? error.message : 'Não foi possível salvar o Diário.' }
     return { success: true, actual: { data: String(saved.data), valor: Number(saved.valor) } }
   } catch { return { success: false, error: 'Não foi possível salvar o Diário.' } }
 }
