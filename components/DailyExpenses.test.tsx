@@ -5,7 +5,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest'
 const m=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),del:vi.fn(),category:vi.fn(),refresh:vi.fn()}))
 vi.mock('@/app/expense-actions',()=>({loadExpenseMonth:m.load,saveExpense:m.save,removeExpense:m.del,createExpenseCategory:m.category}))
 vi.mock('next/navigation',()=>({useRouter:()=>({refresh:m.refresh})}))
-import DailyExpenses from './DailyExpenses'
+import DailyExpenses, {MonthlyBudgetProgress,formatExpenseMonth} from './DailyExpenses'
 vi.stubGlobal('React',React);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
 let root:ReturnType<typeof createRoot>,host:HTMLDivElement
 const date=new Intl.DateTimeFormat('sv-SE').format(new Date())
@@ -22,25 +22,189 @@ async function click(text:string){await act(()=>button(text).click())}
 it('renders selected date, calendar, daily history, monthly breakdown and navigation',async()=>{
  expect(document.body.textContent).toContain('Gastos do Diário');expect(document.body.textContent).toContain('Café')
  expect(document.querySelectorAll('.expenses-calendar-grid button').length).toBeGreaterThanOrEqual(28)
- await click('Mês anterior');expect(m.load).toHaveBeenCalledTimes(2)
+ const current=date.slice(0,7);await click('Mês anterior');await click('Próximo mês');expect(m.load.mock.calls.filter(c=>c[0]===current)).toHaveLength(1)
 })
 it('requires confirmation to delete and sends the concurrency token',async()=>{
  await click('Excluir Café');expect(m.del).not.toHaveBeenCalled();expect(document.querySelector('[role=dialog]')).not.toBeNull()
- await click('Excluir gasto');expect(m.del).toHaveBeenCalledWith(item.id,item.updated_at);expect(m.refresh).toHaveBeenCalled()
+ await click('Excluir');expect(m.del).toHaveBeenCalledWith(item.id,item.updated_at);expect(m.refresh).toHaveBeenCalled()
 })
 it('opens the existing shared accessible modal with default date and closes without writes',async()=>{
- await click('Novo gasto');expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
+ await click('Registrar gasto');expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
  expect(document.querySelector('[role=dialog]')?.getAttribute('aria-modal')).toBe('true')
  expect(document.activeElement?.getAttribute('data-hf-initial-focus')).toBe('true')
  await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
  expect(document.querySelector('[role=dialog]')).toBeNull();expect(m.save).not.toHaveBeenCalled()
 })
 it('keeps load errors visible and supports retry',async()=>{
- m.load.mockResolvedValue({success:false,error:'Falha no histórico'});await click('Mês anterior')
+ m.load.mockResolvedValue({success:false,error:'Falha no histórico'});await click('Mês anterior');await click('Mês anterior')
  expect(document.querySelector('[role=alert]')?.textContent).toContain('Falha no histórico')
- await click('Tentar novamente');expect(m.load).toHaveBeenCalledTimes(3)
+ const calls=m.load.mock.calls.length;await click('Tentar novamente');expect(m.load.mock.calls.length).toBeGreaterThan(calls)
 })
 it('edits a persisted item with the expected version',async()=>{
  await click('Editar Café');await click('Salvar gasto')
  expect(m.save).toHaveBeenCalledWith(expect.objectContaining({id:item.id,expected:item.updated_at,amount:20}))
+})
+
+it.each(['included','additional'] as const)('asks in a shared modal and persists the %s decision with quoted totals',async choice=>{
+ m.save.mockResolvedValueOnce({success:false,reconcile:true,reconciliation:{total:100,remaining:100,delta:20}})
+ await click('Editar Café');await click('Salvar gasto')
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Confirmar gasto do Diário')
+ expect(document.body.textContent).toContain('já está incluído nesse valor?')
+ const option=[...document.querySelectorAll<HTMLButtonElement>('.expenses-confirm-options button')][choice==='included'?0:1]
+ expect(option.textContent).toContain(choice==='included'?'100,00':'120,00')
+ await act(()=>option.click())
+ expect(m.save).toHaveBeenLastCalledWith(expect.objectContaining({reconcile:choice,reconciliation:{total:100,remaining:100,delta:20}}))
+})
+it('disables included choice when the detail exceeds the manual remainder',async()=>{
+ m.save.mockResolvedValueOnce({success:false,reconcile:true,reconciliation:{total:100,remaining:10,delta:20}})
+ await click('Editar Café');await click('Salvar gasto')
+ expect(document.querySelector<HTMLButtonElement>('.expenses-confirm-options button')?.disabled).toBe(true)
+ expect(document.body.textContent).toContain('Restam')
+})
+it('arrows cross month/year boundaries but ignore forms and modals',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2026-12-31" key="keyboard"/>))
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2027-01')
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
+ await click('Registrar gasto')
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
+})
+it('quick add opens only the expense form with today filled',async()=>{
+ await act(()=>root.render(<DailyExpenses quickAdd key="quick"/>))
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Registrar gasto')
+ expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
+ expect(document.querySelector('.expenses-calendar')).toBeNull()
+})
+
+it('keeps the monthly data visible without refetching on focus',async()=>{
+ const calls=m.load.mock.calls.length
+ await act(()=>window.dispatchEvent(new Event('focus')))
+ expect(m.load).toHaveBeenCalledTimes(calls)
+ expect(document.body.textContent).not.toContain('Carregando histórico')
+ expect(document.body.textContent).toContain('Café')
+})
+it('uses a signed balance and a budget progress bar, without duplicate monthly totals',async()=>{
+ expect(document.body.textContent).toContain('Saldo do Diário')
+ expect(document.querySelector('[role=progressbar][aria-label="Orçamento diário consumido"]')).not.toBeNull()
+ const monthly=document.querySelector('[aria-label="Resumo mensal"]')!
+ expect(monthly.textContent).toContain('Gastos registrados')
+ expect(monthly.textContent).not.toContain('Total gasto')
+})
+it('preserves the selected date when registering from history',async()=>{
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true})))
+ const selected=document.querySelector<HTMLButtonElement>('.expenses-calendar-grid .selected')!.textContent!.replace(/[^0-9]/g,'')
+ await act(()=>document.querySelector<HTMLButtonElement>('.expenses-history .expenses-secondary')!.click())
+ expect(Number(document.querySelector<HTMLInputElement>('input[type=date]')!.value.slice(8))).toBe(Number(selected))
+})
+
+it('shows the budget warning after saving and waits for acknowledgment in quick add',async()=>{
+ const close=vi.fn()
+ m.save.mockResolvedValue({success:true,budgetAlert:{category:'Combustível',budget:100,spent:110,exceeded:10,month:date.slice(0,7)}})
+ await act(()=>root.render(<DailyExpenses quickAdd onQuickClose={close} key="alert-quick"/>))
+ // Use a populated edit form so the save input is valid.
+ const description=document.querySelector<HTMLInputElement>('input[maxLength="200"]')!
+ const amount=document.querySelector<HTMLInputElement>('input[inputMode="decimal"]')!
+ const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!
+ await act(()=>{set.call(description,'Combustível');description.dispatchEvent(new Event('input',{bubbles:true}));description.dispatchEvent(new Event('change',{bubbles:true}));set.call(amount,'10');amount.dispatchEvent(new Event('input',{bubbles:true}));amount.dispatchEvent(new Event('change',{bubbles:true}))})
+ await click('Salvar gasto')
+ expect(document.querySelector('[aria-label="Orçamento ultrapassado"]')).not.toBeNull()
+ expect(document.body.textContent).toContain('Você ultrapassou em')
+ expect(document.body.textContent).toContain('Combustível')
+ expect(close).not.toHaveBeenCalled()
+ await click('Entendi');expect(close).toHaveBeenCalledTimes(1)
+})
+it('never shows retroactive budget warnings when opening history',()=>{
+ expect(document.querySelector('[aria-label="Orçamento ultrapassado"]')).toBeNull()
+})
+it('opens compact actions and preserves edit and deletion dialogs',async()=>{
+ await click('Opções de Café');expect(document.querySelector('[role=menu]')?.getAttribute('aria-label')).toBe('Opções de Café');expect(document.querySelector('[role=dialog]')).toBeNull()
+ await click('Editar');expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Editar gasto')
+ await click('Cancelar');await click('Opções de Café');await click('Excluir')
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toContain('Excluir')
+ expect(m.del).not.toHaveBeenCalled()
+})
+
+it('supports menu keyboard navigation, Escape, outside click and Tab without writes',async()=>{
+ const trigger=button('Opções de Café')
+ await act(()=>trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})))
+ expect(document.activeElement?.textContent).toBe('Editar')
+ await act(()=>document.activeElement?.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})))
+ expect(document.activeElement?.textContent).toBe('Excluir')
+ await act(()=>document.activeElement?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
+ expect(document.querySelector('[role=menu]')).toBeNull();expect(document.activeElement).toBe(trigger)
+ await click('Opções de Café')
+ await act(()=>document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})))
+ expect(document.querySelector('[role=menu]')).toBeNull()
+ await click('Opções de Café')
+ await act(()=>document.activeElement?.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true})))
+ expect(document.querySelector('[role=menu]')).toBeNull()
+ expect(m.save).not.toHaveBeenCalled();expect(m.del).not.toHaveBeenCalled()
+})
+
+async function swipe(target:Element,dx:number,dy=0) {
+ for(const type of ['touchstart','touchmove','touchend']) {
+  const point={identifier:1,clientX:type==='touchstart'?200:200+dx,clientY:type==='touchstart'?100:100+dy}
+  const event=new Event(type,{bubbles:true});Object.defineProperties(event,{touches:{value:type==='touchend'?[]:[point]},changedTouches:{value:[point]}})
+  await act(()=>target.dispatchEvent(event))
+ }
+}
+it('swipes calendar once per gesture, preserves vertical scroll and buttons, and crosses years by arrows',async()=>{
+ Object.defineProperty(window,'innerWidth',{value:390,configurable:true})
+ await act(()=>root.render(<DailyExpenses initialDate="2026-12-01" key="swipe"/>))
+ await swipe(document.querySelector('.expenses-calendar')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ await swipe(document.querySelector('.expenses-calendar')!,100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2026-12')
+ await swipe(document.querySelector('.expenses-calendar')!,10,100)
+ await swipe(document.querySelector('.expenses-calendar-grid button')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ await swipe(document.querySelector('.daily-expenses-page')!,100)
+ await click('Próximo mês');expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ expect(document.body.textContent).not.toContain('gasto(s) registrado(s)')
+ expect(formatExpenseMonth('2026-10')).toBe('Outubro de 2026')
+})
+it.each([[1266,4000,'31,65%',2734,false],[4500,4000,'112,5%',500,true],[0,0,null,0,false],[10,0,null,0,false]])('presents monthly budget %s/%s without artificial percentages',async(spent,budget,percent,remaining,over)=>{
+ await act(()=>root.render(<MonthlyBudgetProgress spent={spent as number} budget={budget as number}/>))
+ const bar=host.querySelector('[role=progressbar]')
+ if(percent) {expect(host.textContent).toContain(percent);expect(Number(bar?.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(100);expect(host.textContent).toContain(over?'Excedido':'Disponível');expect(host.textContent).toContain(remaining.toLocaleString('pt-BR',{minimumFractionDigits:2}))}
+ else {expect(bar).toBeNull();expect(host.textContent).toContain('Sem orçamento definido');expect(host.textContent).not.toContain('%')}
+ expect(host.querySelector('.is-over')!==null).toBe(over)
+})
+
+function selectedDay(){return document.querySelector('.expenses-calendar-grid [aria-pressed="true"] > span')?.textContent}
+it('keeps the day across months, clamps February and remembers explicit choices',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2028-01-31" key="month-days"/>))
+ await click('Próximo mês');expect(selectedDay()).toBe('29')
+ await click('Mês anterior');expect(selectedDay()).toBe('29')
+ await act(()=>document.querySelectorAll<HTMLButtonElement>('.expenses-calendar-grid button')[30].click())
+ await click('Próximo mês');expect(selectedDay()).toBe('29')
+ await click('Próximo mês');expect(selectedDay()).toBe('31')
+ expect(document.querySelector('.expenses-calendar-heading')?.textContent).toContain('Março de 2028')
+})
+it('returns to local today unless the current month has an explicit selection, resetting on remount',async()=>{
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+ await click('Próximo mês');await click('Mês anterior')
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+ await act(()=>document.querySelectorAll<HTMLButtonElement>('.expenses-calendar-grid button')[4].click())
+ await click('Próximo mês');await click('Mês anterior');expect(selectedDay()).toBe('5')
+ await act(()=>root.render(<DailyExpenses key="fresh-visit"/>))
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+})
+it('swipes from cards, history and empty page regions without intercepting controls or vertical scrolling',async()=>{
+ Object.defineProperty(window,'innerWidth',{value:390,configurable:true})
+ const original=document.querySelector<HTMLInputElement>('input[type=month]')!.value
+ await swipe(document.querySelector('.expenses-kpis')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).not.toBe(original)
+ await swipe(document.querySelector('.expenses-history')!,100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(original)
+ await swipe(document.querySelector('.daily-expenses-page')!,10,100)
+ await swipe(document.querySelector('.expenses-primary')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(original)
+})
+it('resolves the opening date in the browser instead of retaining the server fallback date',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2000-01-01" resolveLocalDate key="browser-date"/>))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(date.slice(0,7))
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
 })

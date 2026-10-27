@@ -15,3 +15,21 @@ it('summarizes daily/category items independently of manual adjustments and fore
  expect(result.actualCents).toBe(1030);expect(result.plannedCents).toBe(310000)
  expect(result.schedule[25].realizado).toBe(10.3);expect(result.schedule[24].realizado).toBe(null)
 })
+
+it('uses stable category colors and informative limits without changing totals',async()=>{
+ const {categoryStyle,categoryBudgets,shiftExpenseDate}=await import('./daily-expenses')
+ expect(categoryStyle('mercado')).toEqual(categoryStyle('mercado'))
+ expect(shiftExpenseDate('2026-12-31',1)).toBe('2027-01-01')
+ expect(shiftExpenseDate('2024-03-01',-1)).toBe('2024-02-29')
+ expect(categoryBudgets({expenses:[],categories:[],days:[],actuals:[],budgets:[{id:'b',descricao:'Mercado',categoria:'',mes_referencia:null,valor_mensal:1500}],budgetCategories:[{budget_id:'b',category_id:'c'}]})).toEqual({c:150000})
+})
+
+it('distinguishes identities beyond eight colors and stays stable after reorder, rename and growth',async()=>{
+ const {categoryStyle}=await import('./daily-expenses')
+ const categories=Array.from({length:200},(_,i)=>({id:`10000000-0000-4000-8000-${String(i).padStart(12,'0')}`,name:`Categoria ${i}`}))
+ const colors=categories.map(c=>JSON.stringify(categoryStyle(c.id)))
+ expect(new Set(colors).size).toBe(categories.length)
+ for(const c of [...categories].reverse()) expect(categoryStyle(c.id)).toEqual(categoryStyle({...c,name:'Renomeada'}.id))
+ expect(categoryStyle(null)).not.toEqual(categoryStyle(categories[0].id))
+ expect(categoryStyle(categories[0].id)).toEqual(JSON.parse(colors[0]))
+})

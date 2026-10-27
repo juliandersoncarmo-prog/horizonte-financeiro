@@ -458,3 +458,193 @@ body {
 }
 [data-theme="dark"] .expenses-month-nav input,
 [data-theme="dark"] .expenses-form input[type="date"] { color-scheme:dark; }
+
+/* Stable category identities; soft fills remain readable in both themes. */
+.expense-category-tag { display:inline-block; width:fit-content; border-radius:6px; padding:3px 7px; font-size:11px; font-weight:600; line-height:1.4; }
+.expenses-item-copy .expense-category-tag { margin-top:5px; }
+.expense-tone-0 { background:#e0eefb; color:#235782; }
+.expense-tone-1 { background:#e0f2e9; color:#266346; }
+.expense-tone-2 { background:#f0e6fb; color:#684286; }
+.expense-tone-3 { background:#fce9da; color:#87502c; }
+.expense-tone-4 { background:#f9e3eb; color:#8e3e5e; }
+.expense-tone-5 { background:#dff2f2; color:#226667; }
+.expense-tone-6 { background:#f5efd8; color:#716020; }
+.expense-tone-7 { background:#e8e9f8; color:#4c5086; }
+[data-theme="dark"] .expense-category-tag { background:color-mix(in srgb,currentColor 17%,var(--surface)); }
+[data-theme="dark"] .expense-tone-0 { color:#a7d2f5; }
+[data-theme="dark"] .expense-tone-1 { color:#9ed9bc; }
+[data-theme="dark"] .expense-tone-2 { color:#d0b2ee; }
+[data-theme="dark"] .expense-tone-3 { color:#efc09e; }
+[data-theme="dark"] .expense-tone-4 { color:#f0b1c9; }
+[data-theme="dark"] .expense-tone-5 { color:#9bdadb; }
+[data-theme="dark"] .expense-tone-6 { color:#e5d68e; }
+[data-theme="dark"] .expense-tone-7 { color:#bdc0f1; }
+.expenses-categories li>div:last-child { text-align:right; }
+.expenses-categories small { display:block; margin-top:5px; }
+.expenses-limit-over { color:var(--red); font-size:12px; }
+.expenses-confirm-options { display:grid; gap:12px; margin:20px 0; }
+.expenses-confirm-options button { display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:14px; }
+@media(max-width:600px) { .expenses-calendar-grid { margin-top:10px; gap:2px; } .expenses-weekday { padding:4px 0; } }
+
+/* Gastos do Diário: readable hierarchy, scoped to this module and its portals. */
+.daily-expenses-page { font-size:15px; line-height:1.5; }
+.expenses-heading p,.expenses-help,.expenses-empty { color:var(--text-2); font-size:14px; }
+.expenses-panel h2,.expenses-form h2 { font-size:18px; line-height:1.4; }
+.expenses-panel h3 { font-size:15px; }
+.expenses-kpis { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.expenses-kpis span { font-size:14px; line-height:1.4; }
+.expenses-kpis strong { font-size:25px; line-height:1.25; white-space:nowrap; }
+.expenses-kpis small { font-size:13px; color:var(--text-2); line-height:1.5; }
+.expenses-primary,.expenses-secondary,.expenses-danger { font-size:15px; min-height:44px; }
+.expenses-danger { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; background:var(--red); color:#fff; font-weight:600; }
+.expenses-month-nav input,.expenses-month-nav button { font-size:15px; min-height:44px; }
+.expenses-calendar-grid button { font-size:15px; min-height:44px; }
+.expenses-weekday { font-size:13px; }
+.expenses-calendar-grid small { font-size:11px; }
+.expenses-item-copy strong,.expenses-item-amount { font-size:16px; }
+.expenses-item-copy small,.expense-category-tag { font-size:13px; }
+.expenses-day-total,.expenses-adjustment,.expenses-form label,.expenses-error,.expenses-notice { font-size:14px; }
+.expenses-form { min-width:0; }
+.expenses-form>p,.expenses-reconcile p { font-size:15px; line-height:1.65; white-space:normal; overflow-wrap:anywhere; }
+.expenses-delete-copy { max-width:100%; }
+.expenses-form .expenses-secondary { background:var(--surface-2); color:var(--text); border:1px solid var(--border-strong); }
+.expenses-progress { margin-top:18px; }
+.expenses-progress-track { height:7px; border-radius:99px; overflow:hidden; background:var(--border); position:relative; }
+.expenses-progress-track>span { display:block; height:100%; background:var(--accent); border-radius:inherit; }
+.expenses-progress.is-over .expenses-progress-track>span { background:var(--red); }
+.expenses-progress-track>i { position:absolute; inset:0 0 0 80%; background:repeating-linear-gradient(120deg,transparent 0 4px,rgba(255,255,255,.45) 4px 7px); border-left:2px solid var(--surface); }
+.expenses-progress p { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; font-size:13px; color:var(--text-2); margin-top:8px; }
+.expenses-progress.is-over p { color:var(--red); }
+.expenses-categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:12px; margin-top:12px; }
+.expenses-categories li { display:block; padding:16px; border:1px solid var(--border); border-radius:12px; min-width:0; background:var(--surface-2); }
+.expenses-categories .expenses-category-head { text-align:left; }
+.expenses-category-values { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin-top:12px; text-align:left!important; }
+.expenses-category-values strong { font-size:19px; }
+.expenses-category-values>span { font-size:14px; color:var(--text-2); }
+.expenses-categories .expenses-progress { margin-top:12px; }
+@media(max-width:600px) {
+ .expenses-kpis { grid-template-columns:1fr; gap:8px; }
+ .expenses-kpis>div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:14px 12px; align-items:center; }
+ .expenses-kpis span { font-size:14px; }
+ .expenses-kpis strong { font-size:23px; margin:0; }
+ .expenses-kpis small { grid-column:1 / -1; font-size:13px; }
+ .expenses-item-amount { max-width:100%; white-space:nowrap; }
+ .expenses-history .expenses-section-heading>.expenses-secondary { width:100%; }
+ .expenses-form-actions>button { flex:1; }
+ .expenses-form label { font-size:14px; }
+}
+@media(max-width:359px) { .expenses-kpis>div { grid-template-columns:1fr; } .expenses-kpis strong { font-size:23px; } }
+
+/* Mobile refinements: retain the five destinations and existing financial layout. */
+.quick-launch-panel { display:grid; gap:10px; min-width:0; }
+.quick-launch-panel>div { margin:0 0 4px; gap:12px; }
+.quick-launch-panel>button { display:flex; align-items:center; justify-content:flex-start; gap:12px; width:100%; min-height:56px; margin:0; padding:14px 16px; text-align:left; line-height:1.4; font-size:16px; }
+.quick-launch-panel svg { flex-shrink:0; }
+[data-hf-modal]:has(.quick-launch-panel)>div { padding:max(16px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
+[data-hf-modal]:has(.quick-launch-panel) [role=dialog] { max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+.expenses-list li { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:8px; padding:9px 0; }
+.expenses-item-copy { min-width:0; }
+.expenses-item-copy strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.expenses-item-copy .expense-category-tag { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; margin-top:3px; }
+.expenses-item-amount { max-width:none; white-space:nowrap; overflow-wrap:normal; }
+.expenses-item-actions { margin:0; flex-wrap:nowrap; }
+.expenses-item-more { display:none; }
+.expenses-month-nav { display:grid; grid-template-columns:44px minmax(0,240px) 44px auto; gap:8px; }
+.expenses-month-nav>button:last-child { padding-inline:10px; }
+.expenses-month-picker { position:relative; min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:10px; background:var(--surface); text-align:center; padding:8px; line-height:1.4; }
+.expenses-month-picker>span:first-child { text-transform:none; }
+.expenses-month-picker input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.expenses-month-picker:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+.expenses-budget-alert dl { display:grid; gap:12px; margin-top:20px; }
+.expenses-budget-alert dl>div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 12px; }
+.expenses-budget-alert dt { color:var(--text-2); }
+.expenses-budget-alert dd { font-weight:600; font-variant-numeric:tabular-nums; }
+.expenses-budget-alert dl>div:last-child dd { color:var(--red); }
+@media(max-width:639px) {
+ .mobile-bottom-nav>a,.mobile-bottom-nav>button:not(.mobile-add) { flex-direction:column; gap:4px; min-width:0; white-space:nowrap; font-size:12px; }
+ .mobile-bottom-nav svg { flex-shrink:0; width:19px; height:19px; }
+ .mobile-bottom-nav .mobile-add svg { width:32px; height:32px; }
+ .ledger-controls .month-navigation { width:100%; min-width:0; gap:4px; }
+ .ledger-controls .mobile-month-select { padding-inline:6px; gap:4px; font-size:16px; }
+ .ledger-controls .mobile-month-select>span { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
+ .ledger-controls .mobile-month-select>svg { flex-shrink:0; }
+ .expenses-list .expenses-item-actions { display:none; }
+ .expenses-item-more { display:flex; align-items:center; justify-content:center; width:44px; height:44px; color:var(--text-2); border-radius:8px; }
+ .expenses-list .expenses-item-copy { flex-basis:auto; }
+ .expenses-month-nav { grid-template-columns:44px minmax(0,1fr) 44px; }
+
+ .expenses-month-picker { font-size:16px; }
+}
+@media(max-width:359px) {
+ .mobile-bottom-nav>a,.mobile-bottom-nav>button:not(.mobile-add) { gap:3px; font-size:11px; }
+ .mobile-bottom-nav svg { width:16px; height:16px; }
+}
+
+/* Final scoped refinements: retain desktop placement and mobile reading order. */
+.expenses-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+.expenses-heading>div:first-child { grid-area:1 / 1; min-width:0; }
+.expenses-heading>.expenses-primary { grid-area:1 / 2; }
+.expenses-heading>.expenses-month-nav { grid-area:2 / 1 / 3 / -1; margin:4px 0 20px; grid-template-columns:44px minmax(0,240px) 44px; }
+.expenses-day-total { border-top:1px solid var(--border); align-items:baseline; flex-wrap:wrap; gap:6px 12px; }
+.expenses-list li:last-child { border-bottom:0; }
+.expenses-day-total>span { flex:1 1 120px; min-width:0; }
+.expenses-day-total>strong { margin-left:auto; text-align:right; font-size:20px; font-weight:650; font-variant-numeric:tabular-nums; max-width:100%; overflow-wrap:anywhere; }
+.expenses-action-menu { position:fixed; z-index:110; width:144px; max-width:calc(100vw - 16px); padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text); box-shadow:0 6px 24px #0002; }
+.expenses-action-menu button { display:flex; align-items:center; gap:9px; width:100%; min-height:44px; padding:8px 10px; border-radius:6px; text-align:left; font-size:14px; }
+.expenses-action-menu button:last-child { color:var(--red); }
+.expenses-action-menu button:hover,.expenses-action-menu button:focus-visible { background:var(--surface-2); outline:2px solid var(--accent); outline-offset:-2px; }
+@media(max-width:640px) {
+ .expenses-heading { grid-template-columns:minmax(0,1fr); gap:12px; margin-bottom:20px; }
+ .expenses-heading>div:first-child { grid-area:1 / 1; }
+ .expenses-heading>.expenses-month-nav { grid-area:2 / 1; grid-template-columns:44px minmax(0,1fr) 44px; margin:0; }
+ .expenses-heading>.expenses-primary { grid-area:3 / 1; width:100%; }
+}
+
+/* Navigation and expense refinements, shared by the desktop sidebar and drawer. */
+.sidebar-section-label { padding:12px 12px 6px; color:var(--text-3); font-size:11px; font-weight:600; }
+.sidebar-footer-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:6px; container-type:inline-size; }
+.sidebar-footer-actions>a,.sidebar-footer-actions button { display:flex; align-items:center; justify-content:center; gap:7px; min-width:44px; min-height:44px; padding:8px; border-radius:8px; white-space:nowrap; font-size:12px; color:var(--text-2); }
+.sidebar-footer-actions svg { flex-shrink:0; }
+.sidebar-footer-actions>a:hover,.sidebar-footer-actions button:hover { background:var(--surface-2); color:var(--text); }
+@container (max-width:190px) { .sidebar-footer-actions span { display:none; } }
+.desktop-sidebar nav>a,.desktop-sidebar nav>button,.mobile-drawer nav>a,.mobile-drawer nav>button { min-height:44px; white-space:nowrap; }
+.expenses-heading>div:first-child { grid-area:1 / 1 / 2 / -1; }
+.expenses-heading>.expenses-primary { grid-area:2 / 2; align-self:start; }
+.expenses-heading>.expenses-month-nav { grid-area:2 / 1; margin:0; }
+.expenses-heading { gap:16px; margin-bottom:24px; }
+.expenses-day-total>span { font-size:16px; font-weight:600; }
+.expenses-calendar { touch-action:pan-y; }
+.expense-category-color { background:var(--category-bg); color:var(--category-fg); }
+[data-theme="dark"] .expense-category-color { background:var(--category-dark-bg); color:var(--category-dark-fg); }
+.expenses-selected-category { align-self:flex-start; margin-top:6px; }
+.expenses-monthly-progress { margin:20px 0 24px; }
+.expenses-monthly-progress-title { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.expenses-monthly-progress-title h3 { margin:0; font-size:15px; font-weight:600; }
+.expenses-monthly-progress>p { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 16px; font-size:13px; }
+.expenses-monthly-progress.is-over .expenses-monthly-progress-title strong { color:var(--red); }
+@media(max-width:640px) {
+ .expenses-heading { gap:12px; }
+ .expenses-heading>div:first-child { grid-area:1 / 1; }
+ .expenses-heading>.expenses-month-nav { grid-area:2 / 1; }
+ .expenses-heading>.expenses-primary { grid-area:3 / 1; }
+ .mobile-bottom-nav>a,.mobile-bottom-nav>button:not(.mobile-add) { flex-direction:column; text-align:center; }
+}
+
+.expenses-list .expenses-item-actions { display:none; }
+.expenses-item-more { display:flex; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0; color:var(--text-2); border-radius:8px; }
+
+/* Calendar context stays with the calendar, without additional navigation. */
+.expenses-calendar-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.expenses-calendar-heading h2 { margin:0; font-size:15px; }
+.expenses-calendar-heading > span { color:var(--text-3); font-size:12px; white-space:nowrap; margin-left:auto; }
+/* One mobile page scroller: KPIs flow away; only the table heading sticks.
+   The app header sits outside ledger-view, so top:0 is below it. Avoid overflow
+   ancestors between the heading and ledger-view (including overflow-x:auto,
+   which also creates a vertical scroll container). */
+@media (max-width:639px) {
+ .ledger-view { min-height:0; scroll-behavior:auto; overflow-anchor:none; }
+ .ledger-months > .month-card { overflow:visible; }
+ .ledger-months .month-table-viewport { overflow:visible; }
+ .ledger-months .month-scroll { overflow:visible; max-height:none; overscroll-behavior-y:auto; }
+ .ledger-months .month-table-heading { position:sticky; top:0; z-index:20; }
+}

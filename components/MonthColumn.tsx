@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import ChoiceField from './ChoiceField'
 
 import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
@@ -43,8 +43,40 @@ export default function MonthColumn({
   month, selectedDate, onDaySelect, mode, onModeChange, className, hasData,
 }: MonthColumnProps) {
   // Overflow uses the existing gesture boundary only when content needs scrolling.
-  const scrollTouch = useRef<{ x: number; y: number; left: number } | null>(null)
+  const scrollTouch = useRef<{ x: number; y: number; left: number; viewport: HTMLElement } | null>(null)
   const dragged = useRef(false)
+  const rows = useRef<HTMLDivElement>(null)
+  const positioned = useRef(false)
+  const interacted = useRef(false)
+  useEffect(() => {
+    if (positioned.current || interacted.current) return
+    // Mobile has one page scroller; desktop keeps its existing column scroller.
+    const page = rows.current?.closest<HTMLElement>('.ledger-view')
+    const stopPositioning = () => { interacted.current = true }
+    const events = ['touchstart', 'wheel', 'pointerdown', 'keydown'] as const
+    events.forEach(event => page?.addEventListener(event, stopPositioning, { capture: true, passive: true }))
+    const frame = requestAnimationFrame(() => {
+      if (interacted.current || !rows.current) return
+      const row = rows.current.querySelector<HTMLElement>('[data-today="true"]')
+      if (!row) return
+      const mobile = window.innerWidth < 640
+      const viewport = mobile ? page : rows.current
+      if (!viewport || viewport.clientHeight === 0) return
+      const heading = rows.current.closest('.month-table')?.querySelector<HTMLElement>('.month-table-heading')
+      const inset = mobile ? (heading?.getBoundingClientRect().height ?? 40) + 8 : viewport.clientHeight / 3
+      const top = row.getBoundingClientRect().top - viewport.getBoundingClientRect().top
+      // Already visible days need no movement. Use an immediate, one-time offset,
+      // never smooth scrolling that could compete with the user's next gesture.
+      if (top < inset || top + row.getBoundingClientRect().height > viewport.clientHeight) {
+        viewport.scrollTop += top - inset
+      }
+      positioned.current = true
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      events.forEach(event => page?.removeEventListener(event, stopPositioning, true))
+    }
+  }, [month])
   const exhausted = exhaustedDailyBudget(month)
   return (
     <div className={`month-card flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
@@ -69,17 +101,20 @@ export default function MonthColumn({
 
       <div className="month-table-viewport" onTouchStart={event => {
         dragged.current = false
-        if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth || event.touches.length !== 1) return
+        const viewport = window.innerWidth < 640
+          ? event.currentTarget.closest<HTMLElement>('.ledger-view') ?? event.currentTarget
+          : event.currentTarget
+        if (viewport.scrollWidth <= viewport.clientWidth || event.touches.length !== 1) return
         event.stopPropagation()
         const touch = event.touches[0]
-        scrollTouch.current = { x: touch.clientX, y: touch.clientY, left: event.currentTarget.scrollLeft }
+        scrollTouch.current = { x: touch.clientX, y: touch.clientY, left: viewport.scrollLeft, viewport }
       }} onTouchMove={event => {
         const start = scrollTouch.current
         if (!start || event.touches.length !== 1) return
         event.stopPropagation()
         const touch = event.touches[0], dx = touch.clientX - start.x, dy = touch.clientY - start.y
         if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-          event.currentTarget.scrollLeft = start.left - dx
+          start.viewport.scrollLeft = start.left - dx
           dragged.current = true
         }
       }} onTouchEnd={event => { if (scrollTouch.current) event.stopPropagation(); scrollTouch.current = null }} onTouchCancel={() => { scrollTouch.current = null }} onClickCapture={event => {
@@ -97,7 +132,7 @@ export default function MonthColumn({
       </div>
 
       {/* Day rows */}
-      <div className="flex-1 overflow-y-auto month-scroll">
+      <div ref={rows} className="flex-1 overflow-y-auto month-scroll" onTouchStart={()=>{interacted.current=true}} onWheel={()=>{interacted.current=true}} onPointerDown={()=>{interacted.current=true}} onKeyDown={()=>{interacted.current=true}}>
         {month.days.map(day => {
           const color      = balanceColor(day.saldo, hasData)
           const isSelected = day.date === selectedDate
@@ -108,6 +143,7 @@ export default function MonthColumn({
           return (
             <div
               key={day.date}
+              data-today={day.isToday || undefined}
               onClick={() => onDaySelect(day.date)}
               className={[
                 'month-day-row w-full grid grid-cols-[72px_1fr_96px] h-9 items-center px-3 text-left transition-colors',

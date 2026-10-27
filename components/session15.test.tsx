@@ -42,3 +42,34 @@ const projection=runProjection({settings:{saldo_abertura:1000,data_ancora:'2026-
 it.each([320,375,390,430,768,1280])('preserves month count at %s px (DOM only)',async width=>{
  Object.defineProperty(window,'innerWidth',{value:width,configurable:true});await render(<ProjectionProvider projection={projection}><LedgerView projection={projection}/></ProjectionProvider>);expect(host.querySelectorAll('.month-card')).toHaveLength(width>=1024?4:width>=640?2:1);expect(host.querySelector('.mobile-month-select > span')?.textContent).toBe('Outubro de 2026')
 })
+
+it('keeps main destinations in order and settings/logout together in footer',async()=>{
+ await render(<Sidebar/>)
+ const nav=host.querySelector('.desktop-sidebar nav')!
+ expect([...nav.querySelectorAll('a,button')].map(n=>n.textContent)).toEqual(['Visão Geral','Diário','Gastos do Diário','Cartões','Resumo Mensal','Novo lançamento'])
+ expect(nav.querySelector('[href="/configuracoes"]')).toBeNull()
+ const footer=host.querySelector('.sidebar-footer-actions')!
+ expect(footer.querySelector('a')?.getAttribute('href')).toBe('/configuracoes')
+ expect(footer.querySelector('button')?.getAttribute('type')).toBe('submit')
+ const bottom=host.querySelector('.mobile-bottom-nav')!
+ expect(bottom.children).toHaveLength(5)
+ expect([...bottom.children].map(n=>n.textContent)).toEqual(['Início','Diário','','Gastos','Resumo'])
+ expect(bottom.children[3].getAttribute('href')).toBe('/gastos-do-diario')
+ await act(()=>[...nav.querySelectorAll('button')].find(b=>b.textContent==='Novo lançamento')!.click())
+ expect([...document.querySelectorAll('.quick-launch-panel>button')].map(n=>n.textContent)).toEqual(['Nova entrada','Novo investimento','Nova saída','Gasto do Diário'])
+ await act(()=>document.querySelector<HTMLButtonElement>('.mobile-new-investment')!.click())
+ expect(document.body.textContent).toContain('Formulário investimento')
+})
+
+it.each(['/configuracoes','/gastos-do-diario','/'])('closes the mobile drawer on navigation to %s including footer links',async href=>{
+ await render(<Sidebar/>)
+ await act(()=>host.querySelector<HTMLButtonElement>('[aria-label="Abrir menu"]')!.click())
+ const drawer=document.querySelector('.mobile-drawer')!
+ expect(drawer).not.toBeNull()
+ // Keep the test in this document; the actual link and href remain intact.
+ const link=drawer.querySelector<HTMLAnchorElement>(`a[href="${href}"]`)!
+ link.addEventListener('click',e=>e.preventDefault())
+ await act(()=>link.click())
+ expect(document.querySelector('.mobile-drawer')).toBeNull()
+ expect(host.querySelector('.desktop-sidebar')).not.toBeNull()
+})

@@ -9,6 +9,7 @@ import CreditCardsModal from './CreditCardsModal'
 import DiarioModal from './DiarioModal'
 import MonthlySummaryModal from './MonthlySummaryModal'
 import ModalPortal from './ModalPortal'
+import DailyExpenses from './DailyExpenses'
 import { signOut } from '@/app/actions'
 
 
@@ -27,6 +28,7 @@ function subscribeTheme(callback: () => void) {
 export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horizonte Financeiro', initials: 'HF' } }: { profile?: { name: string; email: string; initials: string } }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [quickExpense,setQuickExpense]=useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [modal,       setModal]       = useState<'entrada' | 'saida' | 'investimento' | null>(null)
@@ -72,7 +74,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
+      <nav aria-label="Menu principal" className="flex-1 px-3 py-2 flex flex-col gap-0.5">
+        <p className="sidebar-section-label">Navegação principal</p>
         <Link
           href="/"
           className={navBtn(pathname === '/')}
@@ -80,24 +83,6 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           <LayoutDashboard className="w-[18px] h-[18px] flex-none" />
           Visão Geral
         </Link>
-
-        <button
-          onClick={() => setModal('entrada')}
-          className={navBtn(false)}
-        >
-          <TrendingUp className="w-[18px] h-[18px] flex-none" />
-          + Entrada
-        </button>
-
-        <button
-          onClick={() => setModal('saida')}
-          className={navBtn(false)}
-        >
-          <TrendingDown className="w-[18px] h-[18px] flex-none" />
-          + Saída
-        </button>
-
-        <button onClick={() => setModal('investimento')} className={navBtn(false)}><TrendingUp className="w-[18px] h-[18px] flex-none text-accent" />+ Investimento</button>
 
         <button
           onClick={() => setShowDiario(true)}
@@ -119,14 +104,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           Resumo Mensal
         </button>
 
-        <Link
-          href="/configuracoes"
-          prefetch={false}
-          className={navBtn(pathname === '/configuracoes')}
-        >
-          <Settings className="w-[18px] h-[18px] flex-none" />
-          Configurações
-        </Link>
+        <p className="sidebar-section-label">Lançamentos</p>
+        <button type="button" onClick={() => setShowAdd(true)} className={navBtn(false)}><Plus className="w-[18px] h-[18px] flex-none" />Novo lançamento</button>
       </nav>
 
       {/* Footer */}
@@ -141,21 +120,17 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           </div>
           <button
             onClick={toggleTheme}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text transition-colors flex-none"
+            className="w-11 h-11 flex items-center justify-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text transition-colors flex-none"
+            aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
             title={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
           >
             <span className="text-sm select-none">{theme === 'light' ? '☽' : '☀'}</span>
           </button>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-text-3 hover:text-text hover:bg-surface-2 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5 flex-none" />
-            Sair
-          </button>
-        </form>
+        <div className="sidebar-footer-actions">
+          <Link href="/configuracoes" prefetch={false} aria-label="Configurações" title="Configurações"><Settings size={18}/><span>Configurações</span></Link>
+          <form action={signOut}><button type="submit" aria-label="Sair" title="Sair"><LogOut size={18}/><span>Sair</span></button></form>
+        </div>
       </div>
 
     </>
@@ -164,6 +139,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
         <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
       )}
 
+      {quickExpense && <DailyExpenses quickAdd onQuickClose={()=>setQuickExpense(false)}/>}
       {showSummary && <MonthlySummaryModal onClose={() => setShowSummary(false)} />}
 
       {showCards && <CreditCardsModal onClose={() => setShowCards(false)} />}
@@ -181,20 +157,21 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       <Link href="/" aria-current={pathname === '/' && !showDiario && !showCards && !showSummary ? 'page' : undefined}><Home size={22} /><span>Início</span></Link>
       <button type="button" onClick={() => setShowDiario(true)} aria-pressed={showDiario}><CalendarDays size={22} /><span>Diário</span></button>
       <button type="button" className="mobile-add" aria-label="Novo lançamento" onClick={() => setShowAdd(true)}><Plus size={32} /></button>
-      <button type="button" onClick={() => setShowCards(true)} aria-pressed={showCards}><CreditCard size={22} /><span>Cartões</span></button>
+      <Link href="/gastos-do-diario" prefetch={false} aria-current={pathname === "/gastos-do-diario" ? "page" : undefined}><List size={22} /><span>Gastos</span></Link>
       <button type="button" onClick={() => setShowSummary(true)} aria-pressed={showSummary}><BarChart3 size={22} /><span>Resumo</span></button>
     </nav>
     {showAdd && <ModalPortal label="Novo lançamento" onClose={() => setShowAdd(false)}>
-      <div className="bg-surface p-5 rounded-2xl border border-border">
+      <div className="quick-launch-panel bg-surface p-5 rounded-2xl border border-border">
         <div className="flex items-center justify-between mb-4"><h2 className="font-semibold text-text">Novo lançamento</h2><button type="button" aria-label="Fechar opções" onClick={() => setShowAdd(false)} className="p-3"><X size={20} /></button></div>
         <button type="button" className="mobile-new-entry" onClick={() => { setShowAdd(false); setModal('entrada') }}><TrendingUp size={22} />Nova entrada</button>
         <button type="button" className="mobile-new-investment" onClick={() => { setShowAdd(false); setModal('investimento') }}><TrendingUp size={22} />Novo investimento</button>
         <button type="button" className="mobile-new-expense" onClick={() => { setShowAdd(false); setModal('saida') }}><TrendingDown size={22} />Nova saída</button>
+        <button type="button" className="mobile-new-investment" onClick={()=>{setShowAdd(false);setQuickExpense(true)}}><CalendarDays size={22}/>Gasto do Diário</button>
       </div>
     </ModalPortal>}
     <aside className="desktop-sidebar w-60 flex-none flex flex-col border-r border-border bg-surface h-full">{content}</aside>
     {menuOpen && <ModalPortal label="Menu de navegação" onClose={() => setMenuOpen(false)}>
-      <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, nav a')) setMenuOpen(false) }}>
+      <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, a[href]')) setMenuOpen(false) }}>
         <button className="self-end p-3" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>
         {content}
       </aside>

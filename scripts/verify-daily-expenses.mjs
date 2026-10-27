@@ -1,13 +1,12 @@
 // Isolated interaction/layout check. No login, external database or real finance data.
 // Install Playwright Chromium first, or set CHROMIUM_EXECUTABLE to an existing browser.
 import {createServer} from 'vite'
-import react from '@vitejs/plugin-react'
 import {chromium} from 'playwright'
 import {fileURLToPath} from 'node:url'
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 const path=(p)=>fileURLToPath(new URL(p,import.meta.url))
-const server=await createServer({configFile:false,root:path('../tests/expenses-browser/'),plugins:[react()],resolve:{alias:[{find:'./ProjectionProvider',replacement:path('../tests/expenses-browser/projection.ts')},{find:'@/app/expense-actions',replacement:path('../tests/expenses-browser/actions.ts')},{find:'next/navigation',replacement:path('../tests/expenses-browser/navigation.ts')},{find:'@',replacement:path('../')}]},server:{host:'127.0.0.1',port:0}})
+const server=await createServer({configFile:path('../tests/expenses-browser/vite.config.ts'),server:{host:'127.0.0.1',port:0}})
 await server.listen()
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,args:process.env.CHROMIUM_EXECUTABLE?['--no-sandbox','--disable-dev-shm-usage']:[]})
 const output=process.env.HF_SCREENSHOT_DIR||'/tmp/hf-expenses-screens'
@@ -26,7 +25,7 @@ try {
    assert(geometry.calendar.every(b=>b.h>=44 && b.w>=30),`Calendar targets ${width}`)
    await page.screenshot({path:`${output}/${width}-${theme}.png`,fullPage:true})
   }
-  await page.getByRole('button',{name:'Novo gasto',exact:true}).click()
+  await page.getByRole('button',{name:'Registrar gasto',exact:true}).first().click()
   await page.getByLabel('Descrição',{exact:true}).fill('Café com pão e uma descrição longa para testar legibilidade')
   await page.getByLabel('Valor (R$)',{exact:true}).fill('25,90')
   await page.getByRole('button',{name:'Criar categoria',exact:true}).click()
@@ -37,15 +36,17 @@ try {
   await page.getByRole('button',{name:'Salvar gasto',exact:true}).click()
   await page.getByRole('dialog').waitFor({state:'detached'})
   await page.screenshot({path:`${output}/${width}-history.png`,fullPage:true})
-  await page.getByRole('button',{name:/Editar Café/}).click()
+  await page.getByRole('button',{name:/Opções de Café/}).click()
+  await page.getByRole('menuitem',{name:'Editar',exact:true}).click()
   await page.getByLabel('Valor (R$)',{exact:true}).fill('30,10')
   await page.getByRole('button',{name:'Salvar gasto',exact:true}).click()
   await page.getByRole('dialog').waitFor({state:'detached'})
-  assert((await page.locator('.expenses-item-amount').textContent()).includes('30,10'))
-  await page.getByRole('button',{name:/Excluir Café/}).click()
-  await page.getByRole('button',{name:'Excluir gasto',exact:true}).click()
+  assert((await page.locator('.expenses-list li').filter({hasText:'Café com pão'}).locator('.expenses-item-amount').textContent()).includes('30,10'))
+  await page.getByRole('button',{name:/Opções de Café/}).click()
+  await page.getByRole('menuitem',{name:'Excluir',exact:true}).click()
+  await page.getByRole('button',{name:'Excluir',exact:true}).click()
   await page.getByRole('dialog').waitFor({state:'detached'})
-  await page.getByText('Nenhum gasto detalhado nesta data.',{exact:false}).waitFor()
+  await page.locator('.expenses-list li').filter({hasText:'Café com pão'}).waitFor({state:'detached'})
   console.log(JSON.stringify({width,themes:2,create:true,category:true,edit:true,delete:true,overflow:false}))
  }
  assert.deepEqual(errors,[])
