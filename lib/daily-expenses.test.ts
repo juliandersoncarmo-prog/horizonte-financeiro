@@ -15,3 +15,11 @@ it('summarizes daily/category items independently of manual adjustments and fore
  expect(result.actualCents).toBe(1030);expect(result.plannedCents).toBe(310000)
  expect(result.schedule[25].realizado).toBe(10.3);expect(result.schedule[24].realizado).toBe(null)
 })
+
+it('uses stable category colors and informative limits without changing totals',async()=>{
+ const {categoryTone,categoryBudgets,shiftExpenseDate}=await import('./daily-expenses')
+ expect(categoryTone('mercado')).toBe(categoryTone('mercado'))
+ expect(shiftExpenseDate('2026-12-31',1)).toBe('2027-01-01')
+ expect(shiftExpenseDate('2024-03-01',-1)).toBe('2024-02-29')
+ expect(categoryBudgets({expenses:[],categories:[],days:[],actuals:[],budgets:[{id:'b',descricao:'Mercado',categoria:'',mes_referencia:null,valor_mensal:1500}],budgetCategories:[{budget_id:'b',category_id:'c'}]})).toEqual({c:150000})
+})

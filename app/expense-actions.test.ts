@@ -46,3 +46,10 @@ it('paginates history and includes ownership and month boundaries',async()=>{
  expect(pages).toBe(2);expect(filters).toContainEqual(['daily_expenses','expense_date','2024-02-29'])
  expect(filters.filter(f=>f[1]==='user_id').every(f=>f[2]==='owner')).toBe(true)
 })
+
+it('passes the exact server quote back and exposes fresh conflict details',async()=>{
+ m.rpc.mockResolvedValue({error:{message:'RECONCILE_REQUIRED',details:JSON.stringify({total:100,remaining:70,delta:30})}})
+ const result=await saveExpense({...input,reconcile:'included',reconciliation:{total:100,remaining:70,delta:30}})
+ expect(m.rpc).toHaveBeenCalledWith('save_daily_expense',expect.objectContaining({p_reconcile:'included:100.00:70.00'}))
+ expect(result).toMatchObject({success:false,reconcile:true,reconciliation:{total:100,remaining:70,delta:30}})
+})

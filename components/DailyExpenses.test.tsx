@@ -22,7 +22,7 @@ async function click(text:string){await act(()=>button(text).click())}
 it('renders selected date, calendar, daily history, monthly breakdown and navigation',async()=>{
  expect(document.body.textContent).toContain('Gastos do Diário');expect(document.body.textContent).toContain('Café')
  expect(document.querySelectorAll('.expenses-calendar-grid button').length).toBeGreaterThanOrEqual(28)
- await click('Mês anterior');expect(m.load).toHaveBeenCalledTimes(2)
+ const current=date.slice(0,7);await click('Mês anterior');await click('Próximo mês');expect(m.load.mock.calls.filter(c=>c[0]===current)).toHaveLength(1)
 })
 it('requires confirmation to delete and sends the concurrency token',async()=>{
  await click('Excluir Café');expect(m.del).not.toHaveBeenCalled();expect(document.querySelector('[role=dialog]')).not.toBeNull()
@@ -36,11 +36,44 @@ it('opens the existing shared accessible modal with default date and closes with
  expect(document.querySelector('[role=dialog]')).toBeNull();expect(m.save).not.toHaveBeenCalled()
 })
 it('keeps load errors visible and supports retry',async()=>{
- m.load.mockResolvedValue({success:false,error:'Falha no histórico'});await click('Mês anterior')
+ m.load.mockResolvedValue({success:false,error:'Falha no histórico'});await click('Mês anterior');await click('Mês anterior')
  expect(document.querySelector('[role=alert]')?.textContent).toContain('Falha no histórico')
- await click('Tentar novamente');expect(m.load).toHaveBeenCalledTimes(3)
+ const calls=m.load.mock.calls.length;await click('Tentar novamente');expect(m.load.mock.calls.length).toBeGreaterThan(calls)
 })
 it('edits a persisted item with the expected version',async()=>{
  await click('Editar Café');await click('Salvar gasto')
  expect(m.save).toHaveBeenCalledWith(expect.objectContaining({id:item.id,expected:item.updated_at,amount:20}))
+})
+
+it.each(['included','additional'] as const)('asks in a shared modal and persists the %s decision with quoted totals',async choice=>{
+ m.save.mockResolvedValueOnce({success:false,reconcile:true,reconciliation:{total:100,remaining:100,delta:20}})
+ await click('Editar Café');await click('Salvar gasto')
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Confirmar gasto do Diário')
+ expect(document.body.textContent).toContain('já está incluído nesse valor?')
+ const option=[...document.querySelectorAll<HTMLButtonElement>('.expenses-confirm-options button')][choice==='included'?0:1]
+ expect(option.textContent).toContain(choice==='included'?'100,00':'120,00')
+ await act(()=>option.click())
+ expect(m.save).toHaveBeenLastCalledWith(expect.objectContaining({reconcile:choice,reconciliation:{total:100,remaining:100,delta:20}}))
+})
+it('disables included choice when the detail exceeds the manual remainder',async()=>{
+ m.save.mockResolvedValueOnce({success:false,reconcile:true,reconciliation:{total:100,remaining:10,delta:20}})
+ await click('Editar Café');await click('Salvar gasto')
+ expect(document.querySelector<HTMLButtonElement>('.expenses-confirm-options button')?.disabled).toBe(true)
+ expect(document.body.textContent).toContain('Restam')
+})
+it('arrows cross month/year boundaries but ignore forms and modals',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2026-12-31" key="keyboard"/>))
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2027-01')
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
+ await click('Novo gasto')
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
+})
+it('quick add opens only the expense form with today filled',async()=>{
+ await act(()=>root.render(<DailyExpenses quickAdd key="quick"/>))
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Novo gasto do Diário')
+ expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
+ expect(document.querySelector('.expenses-calendar')).toBeNull()
 })
