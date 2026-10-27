@@ -14,12 +14,31 @@ import { useExpenseMonthCache } from './ExpenseCacheProvider'
 
 const todayLocal=()=>new Intl.DateTimeFormat('sv-SE').format(new Date())
 const dateLabel=(date:string)=>new Date(date+'T12:00:00Z').toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'long',year:'numeric'})
-export default function DailyExpenses({ initialDate, quickAdd=false, onQuickClose }: { initialDate?: string; quickAdd?: boolean; onQuickClose?: () => void }) {
+export default function DailyExpenses({ initialDate, resolveLocalDate=false, quickAdd=false, onQuickClose }: { initialDate?: string; resolveLocalDate?: boolean; quickAdd?: boolean; onQuickClose?: () => void }) {
  const router=useRouter()
  const projection=useOptionalProjection()
  const revision=JSON.stringify([projection?.inputSnapshot?.dailyActuals,projection?.inputSnapshot?.dailyBudgets])
  const [selected,setSelected]=useState(()=>initialDate??todayLocal())
  const month=selected.slice(0,7)
+ const manualDates=useRef(new Map<string,string>())
+ const preferredDay=useRef<number|null>(null)
+ function selectDay(date:string) {
+  manualDates.current.set(date.slice(0,7),date)
+  preferredDay.current=Number(date.slice(8))
+  setSelected(date)
+ }
+ function selectMonth(nextMonth:string) {
+  if(!validExpenseDate(nextMonth+'-01'))return
+  const today=todayLocal()
+  setSelected(current=>{
+   const remembered=manualDates.current.get(nextMonth)
+   if(remembered)return remembered
+   if(nextMonth===today.slice(0,7))return today
+   const last=new Date(nextMonth+'-01T12:00:00Z');last.setUTCMonth(last.getUTCMonth()+1,0)
+   const day=Math.min(preferredDay.current??Number(current.slice(8)),last.getUTCDate())
+   return nextMonth+'-'+String(day).padStart(2,'0')
+  })
+ }
  const [data,setData]=useState<ExpenseMonth|null>(null)
  const [loading,setLoading]=useState(true), [error,setError]=useState(''),[notice,setNotice]=useState('')
  const [form,setForm]=useState<ExpenseInput|null>(null),[deleting,setDeleting]=useState<DailyExpense|null>(null)
@@ -53,7 +72,7 @@ export default function DailyExpenses({ initialDate, quickAdd=false, onQuickClos
   } catch {if(id===request.current){setError('Falha ao carregar. Tente novamente.')}}
   finally {if(id===request.current)setLoading(false)}
  },[month,getMonth,invalidate,cache])
- useEffect(()=>{if(!initialDate)queueMicrotask(()=>setSelected(todayLocal()))},[initialDate])
+ useEffect(()=>{if(!initialDate || resolveLocalDate)queueMicrotask(()=>setSelected(todayLocal()))},[initialDate,resolveLocalDate])
  useEffect(()=>{
   if(cache.revision!==undefined && cache.revision!==revision) {
    const [oldActuals,oldBudgets]=JSON.parse(cache.revision)
@@ -85,16 +104,16 @@ export default function DailyExpenses({ initialDate, quickAdd=false, onQuickClos
    if(quickAdd || form || deleting || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || document.querySelector('[role="dialog"]'))return
    const target=event.target instanceof Element?event.target:null
    if(target?.closest('input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="combobox"],[role="listbox"],[role="menu"],[role="tablist"]'))return
-   if(event.key==='ArrowLeft'||event.key==='ArrowRight') {event.preventDefault();setSelected(date=>shiftExpenseDate(date,event.key==='ArrowLeft'?-1:1))}
+   if(event.key==='ArrowLeft'||event.key==='ArrowRight') {event.preventDefault();selectDay(shiftExpenseDate(selected,event.key==='ArrowLeft'?-1:1))}
   }
   document.addEventListener('keydown',keydown);return()=>document.removeEventListener('keydown',keydown)
- },[quickAdd,form,deleting])
+ },[quickAdd,form,deleting,selected])
  function notifyChange(){try{localStorage.setItem('hf-expenses-revision',crypto.randomUUID())}catch{}}
  function changeMonth(delta:number) {
   const date=new Date(month+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()+delta)
-  const next=date.toISOString().slice(0,10);if(validExpenseDate(next)) setSelected(next)
+  selectMonth(date.toISOString().slice(0,7))
  }
- const swipe=useMobileSwipe(changeMonth,()=>loading || busy || quickAdd || !!document.querySelector('[role="dialog"], [role="menu"]'))
+ const swipe=useMobileSwipe(changeMonth,()=>loading || busy || quickAdd || !!document.querySelector('[role="dialog"], [role="menu"]'), '[data-calendar-day]')
  function open(item?:DailyExpense,date=todayLocal()) {
   setForm(item?{id:item.id,description:item.description,amount:item.amount,category_id:item.category_id,expense_date:item.expense_date,expected:item.updated_at}:{id:crypto.randomUUID(),description:'',amount:0,category_id:null,expense_date:date})
   setValue(item?item.amount.toFixed(2).replace('.',','):'');setFormError('');setReconcile(null);setUncertain(false);setNewCategory(false);setCategoryName('')
@@ -143,10 +162,10 @@ export default function DailyExpenses({ initialDate, quickAdd=false, onQuickClos
  const count=summary?.schedule.length??new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate()
  const offset=new Date(month+'-01T12:00:00Z').getUTCDay()
  const categoryLabel=(id:string|null)=>categories.find(c=>c.id===id)?.name??'Sem categoria'
- return <div className="daily-expenses-page" aria-busy={loading} style={quickAdd?{display:'contents'}:undefined}>
+ return <div {...swipe} className="daily-expenses-page mobile-swipe-area" aria-busy={loading} style={quickAdd?{display:'contents'}:undefined}>
   {!quickAdd && <>
   <header className="expenses-heading"><div><h1>Gastos do Diário</h1><p>Suas despesas, integradas ao Diário Inteligente.</p></div>
-  <div className="expenses-month-nav"><button aria-label="Mês anterior" onClick={()=>changeMonth(-1)}><ChevronLeft size={20}/></button><label className="expenses-month-picker"><span aria-hidden="true">{formatExpenseMonth(month)}</span><span className="sr-only">Mês do histórico</span><input type="month" min="1900-01" max="9999-12" value={month} onChange={e=>{if(validExpenseDate(e.target.value+'-01'))setSelected(e.target.value+'-01')}}/></label><button aria-label="Próximo mês" onClick={()=>changeMonth(1)}><ChevronRight size={20}/></button></div><button className="expenses-primary" onClick={()=>open()} disabled={loading || !data}><Plus size={18}/>Registrar gasto</button></header>
+  <div className="expenses-month-nav"><button aria-label="Mês anterior" onClick={()=>changeMonth(-1)}><ChevronLeft size={20}/></button><label className="expenses-month-picker"><span aria-hidden="true">{formatExpenseMonth(month)}</span><span className="sr-only">Mês do histórico</span><input type="month" min="1900-01" max="9999-12" value={month} onChange={e=>selectMonth(e.target.value)}/></label><button aria-label="Próximo mês" onClick={()=>changeMonth(1)}><ChevronRight size={20}/></button></div><button className="expenses-primary" onClick={()=>open()} disabled={loading || !data}><Plus size={18}/>Registrar gasto</button></header>
   {notice && <p role="status" className="expenses-notice">{notice}</p>}
   {error && data && <div role="alert" className="expenses-panel expenses-error"><p>{error}</p><button className="expenses-secondary" onClick={()=>void reload(true)}>Tentar novamente</button></div>}
   {loading?<p role="status" className="expenses-panel">Carregando histórico…</p>:error&&!data?<div role="alert" className="expenses-panel"><p>{error}</p><button className="expenses-primary" onClick={()=>void reload(true)}>Tentar novamente</button></div>:data && summary && day && <>
@@ -155,10 +174,10 @@ export default function DailyExpenses({ initialDate, quickAdd=false, onQuickClos
     <div><span>Gasto no dia</span><strong>{confirmed===null?'—':formatBRL(confirmed)}</strong></div>
     <div className={available<0?'expenses-over':'expenses-available'}><span>Saldo do Diário</span><strong>{formatBRL(available)}</strong></div>
    </div><BudgetProgress spent={confirmed??0} budget={day.previsto} label="Orçamento diário consumido"/></section>
-   <div className="expenses-columns"><section className="expenses-panel expenses-calendar" aria-label="Calendário mensal" {...swipe}><h2><CalendarDays size={19}/>Calendário de gastos</h2><div className="expenses-calendar-grid">
+   <div className="expenses-columns"><section className="expenses-panel expenses-calendar" aria-label="Calendário mensal"><div className="expenses-calendar-heading"><h2><CalendarDays size={19}/>Calendário de gastos</h2><span>{formatExpenseMonth(month)}</span></div><div className="expenses-calendar-grid">
     {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map((name,i)=><span className="expenses-weekday" key={i}>{name}</span>)}
     {Array.from({length:offset},(_,i)=><span key={'blank'+i}/>)}
-    {Array.from({length:count},(_,i)=>{const date=month+'-'+String(i+1).padStart(2,'0');const hasItems=(summary.byDate[date]??0)>0;const actual=summary.schedule[i].realizado;return <button key={date} className={selected===date?'selected':''} aria-pressed={selected===date} aria-current={date===todayLocal()?'date':undefined} aria-label={`${dateLabel(date)}${hasItems?', com gastos':''}${actual===null?'':', com valor informado'}`} onClick={()=>setSelected(date)}><span>{i+1}</span><small aria-hidden="true">{hasItems?'●':actual!==null?'○':' '}</small></button>})}
+    {Array.from({length:count},(_,i)=>{const date=month+'-'+String(i+1).padStart(2,'0');const hasItems=(summary.byDate[date]??0)>0;const actual=summary.schedule[i].realizado;return <button data-calendar-day key={date} className={selected===date?'selected':''} aria-pressed={selected===date} aria-current={date===todayLocal()?'date':undefined} aria-label={`${dateLabel(date)}${hasItems?', com gastos':''}${actual===null?'':', com valor informado'}`} onClick={()=>selectDay(date)}><span>{i+1}</span><small aria-hidden="true">{hasItems?'●':actual!==null?'○':' '}</small></button>})}
    </div><p className="expenses-help">● Gastos registrados · ○ Total manual</p></section>
    <section className="expenses-panel expenses-history" aria-label="Histórico diário"><div className="expenses-section-heading"><h2>Despesas de {selected.slice(8)}/{selected.slice(5,7)}</h2><button className="expenses-secondary" onClick={()=>open(undefined,selected)}><Plus size={16}/>Registrar gasto</button></div>
     {(adjustment??(!data.days.some(d=>d.expense_date===selected)?confirmed:0)??0)>0 && <div className="expenses-adjustment"><p>Gastos registrados: <strong>{formatBRL((summary.byDate[selected]??0)/100)}</strong></p><p>Outros gastos informados: <strong>{formatBRL(adjustment??confirmed??0)}</strong></p><p>Total gasto: <strong>{formatBRL(confirmed??0)}</strong></p></div>}
