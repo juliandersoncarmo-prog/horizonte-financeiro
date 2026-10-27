@@ -69,7 +69,8 @@ it('preserves month swipes when content fits and scrolls exceptional overflow wi
  await touch('touchstart', 120); await touch('touchend', 120); await act(() => row.click()); expect(select).toHaveBeenCalledTimes(1)
 })
 
-it('positions only the internal list once and leaves manual scrolling untouched after updates', async () => {
+it('positions the desktop internal list once and leaves manual scrolling untouched after updates', async () => {
+ Object.defineProperty(window,'innerWidth',{value:1280,configurable:true})
  const frames:FrameRequestCallback[]=[]
  vi.stubGlobal('requestAnimationFrame',(cb:FrameRequestCallback)=>{frames.push(cb);return frames.length})
  vi.stubGlobal('cancelAnimationFrame',vi.fn())
@@ -83,7 +84,7 @@ it('positions only the internal list once and leaves manual scrolling untouched 
  const scroll=host.querySelector<HTMLElement>('.month-scroll')!
  Object.defineProperties(scroll,{clientHeight:{value:200},scrollHeight:{value:1240}})
  vi.spyOn(scroll,'getBoundingClientRect').mockReturnValue({top:300} as DOMRect)
- vi.spyOn(host.querySelector('[data-today]')!,'getBoundingClientRect').mockReturnValue({top:1340} as DOMRect)
+ vi.spyOn(host.querySelector('[data-today]')!,'getBoundingClientRect').mockReturnValue({top:1340,height:36} as DOMRect)
  await act(()=>frames.shift()!(0))
  expect(scroll.scrollTop).toBeGreaterThan(900)
  scroll.scrollTop=40
