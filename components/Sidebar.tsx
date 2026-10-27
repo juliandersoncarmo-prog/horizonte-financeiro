@@ -9,6 +9,7 @@ import CreditCardsModal from './CreditCardsModal'
 import DiarioModal from './DiarioModal'
 import MonthlySummaryModal from './MonthlySummaryModal'
 import ModalPortal from './ModalPortal'
+import DailyExpenses from './DailyExpenses'
 import { signOut } from '@/app/actions'
 
 
@@ -27,6 +28,7 @@ function subscribeTheme(callback: () => void) {
 export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horizonte Financeiro', initials: 'HF' } }: { profile?: { name: string; email: string; initials: string } }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [quickExpense,setQuickExpense]=useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [modal,       setModal]       = useState<'entrada' | 'saida' | 'investimento' | null>(null)
@@ -164,6 +166,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
         <AddTransactionModal tipo={modal} onClose={() => setModal(null)} />
       )}
 
+      {quickExpense && <DailyExpenses quickAdd onQuickClose={()=>setQuickExpense(false)}/>}
       {showSummary && <MonthlySummaryModal onClose={() => setShowSummary(false)} />}
 
       {showCards && <CreditCardsModal onClose={() => setShowCards(false)} />}
@@ -190,6 +193,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
         <button type="button" className="mobile-new-entry" onClick={() => { setShowAdd(false); setModal('entrada') }}><TrendingUp size={22} />Nova entrada</button>
         <button type="button" className="mobile-new-investment" onClick={() => { setShowAdd(false); setModal('investimento') }}><TrendingUp size={22} />Novo investimento</button>
         <button type="button" className="mobile-new-expense" onClick={() => { setShowAdd(false); setModal('saida') }}><TrendingDown size={22} />Nova saída</button>
+        <button type="button" className="mobile-new-investment" onClick={()=>{setShowAdd(false);setQuickExpense(true)}}><CalendarDays size={22}/>Gasto do Diário</button>
       </div>
     </ModalPortal>}
     <aside className="desktop-sidebar w-60 flex-none flex flex-col border-r border-border bg-surface h-full">{content}</aside>

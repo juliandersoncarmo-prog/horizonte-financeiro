@@ -458,3 +458,30 @@ body {
 }
 [data-theme="dark"] .expenses-month-nav input,
 [data-theme="dark"] .expenses-form input[type="date"] { color-scheme:dark; }
+
+/* Stable category identities; soft fills remain readable in both themes. */
+.expense-category-tag { display:inline-block; width:fit-content; border-radius:6px; padding:3px 7px; font-size:11px; font-weight:600; line-height:1.4; }
+.expenses-item-copy .expense-category-tag { margin-top:5px; }
+.expense-tone-0 { background:#e0eefb; color:#235782; }
+.expense-tone-1 { background:#e0f2e9; color:#266346; }
+.expense-tone-2 { background:#f0e6fb; color:#684286; }
+.expense-tone-3 { background:#fce9da; color:#87502c; }
+.expense-tone-4 { background:#f9e3eb; color:#8e3e5e; }
+.expense-tone-5 { background:#dff2f2; color:#226667; }
+.expense-tone-6 { background:#f5efd8; color:#716020; }
+.expense-tone-7 { background:#e8e9f8; color:#4c5086; }
+[data-theme="dark"] .expense-category-tag { background:color-mix(in srgb,currentColor 17%,var(--surface)); }
+[data-theme="dark"] .expense-tone-0 { color:#a7d2f5; }
+[data-theme="dark"] .expense-tone-1 { color:#9ed9bc; }
+[data-theme="dark"] .expense-tone-2 { color:#d0b2ee; }
+[data-theme="dark"] .expense-tone-3 { color:#efc09e; }
+[data-theme="dark"] .expense-tone-4 { color:#f0b1c9; }
+[data-theme="dark"] .expense-tone-5 { color:#9bdadb; }
+[data-theme="dark"] .expense-tone-6 { color:#e5d68e; }
+[data-theme="dark"] .expense-tone-7 { color:#bdc0f1; }
+.expenses-categories li>div:last-child { text-align:right; }
+.expenses-categories small { display:block; margin-top:5px; }
+.expenses-limit-over { color:var(--red); font-size:12px; }
+.expenses-confirm-options { display:grid; gap:12px; margin:20px 0; }
+.expenses-confirm-options button { display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:14px; }
+@media(max-width:600px) { .expenses-calendar-grid { margin-top:10px; gap:2px; } .expenses-weekday { padding:4px 0; } }
