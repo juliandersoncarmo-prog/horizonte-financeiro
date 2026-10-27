@@ -184,11 +184,11 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       <Link href="/" aria-current={pathname === '/' && !showDiario && !showCards && !showSummary ? 'page' : undefined}><Home size={22} /><span>Início</span></Link>
       <button type="button" onClick={() => setShowDiario(true)} aria-pressed={showDiario}><CalendarDays size={22} /><span>Diário</span></button>
       <button type="button" className="mobile-add" aria-label="Novo lançamento" onClick={() => setShowAdd(true)}><Plus size={32} /></button>
-      <button type="button" onClick={() => setShowCards(true)} aria-pressed={showCards}><CreditCard size={22} /><span>Cartões</span></button>
+      <Link href="/gastos-do-diario" prefetch={false} aria-current={pathname === "/gastos-do-diario" ? "page" : undefined}><List size={22} /><span>Gastos</span></Link>
       <button type="button" onClick={() => setShowSummary(true)} aria-pressed={showSummary}><BarChart3 size={22} /><span>Resumo</span></button>
     </nav>
     {showAdd && <ModalPortal label="Novo lançamento" onClose={() => setShowAdd(false)}>
-      <div className="bg-surface p-5 rounded-2xl border border-border">
+      <div className="quick-launch-panel bg-surface p-5 rounded-2xl border border-border">
         <div className="flex items-center justify-between mb-4"><h2 className="font-semibold text-text">Novo lançamento</h2><button type="button" aria-label="Fechar opções" onClick={() => setShowAdd(false)} className="p-3"><X size={20} /></button></div>
         <button type="button" className="mobile-new-entry" onClick={() => { setShowAdd(false); setModal('entrada') }}><TrendingUp size={22} />Nova entrada</button>
         <button type="button" className="mobile-new-investment" onClick={() => { setShowAdd(false); setModal('investimento') }}><TrendingUp size={22} />Novo investimento</button>

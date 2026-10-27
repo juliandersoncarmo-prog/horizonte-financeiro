@@ -17,6 +17,7 @@ beforeAll(async()=>{
  await db.exec(readFileSync('supabase/migrations/20261026213250_gastos_do_diario.sql','utf8'))
  await db.exec(`CREATE TABLE public.daily_budgets(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id),descricao text,valor_mensal numeric,mes_referencia text); ALTER TABLE public.daily_budgets ENABLE ROW LEVEL SECURITY; CREATE POLICY owner ON public.daily_budgets FOR ALL TO authenticated USING(user_id=auth.uid()) WITH CHECK(user_id=auth.uid()); GRANT ALL ON public.daily_budgets TO authenticated;`)
  await db.exec(readFileSync('supabase/migrations/20261026235504_refinamentos_gastos_diario.sql','utf8'))
+ await db.exec(readFileSync('supabase/migrations/20261027005337_budget_crossing_alert.sql','utf8'))
  await login()
 },30000)
 afterAll(async()=>{await db.close()})
@@ -93,5 +94,54 @@ it('isolates category links between owners and rejects anonymous RPC calls',asyn
  await db.exec('RESET ROLE; SET ROLE anon;')
  await expect(db.query('select * from budget_expense_categories')).rejects.toThrow(/permission/)
  await expect(save('2027-01-01',30)).rejects.toThrow(/permission/)
+ await login()
+})
+
+async function alertSave(amount:number,cat:string|null,date='2028-01-01',id=uuid(),expected:string|null=null) {
+ const r=await db.query<{result:{budgetAlert:null|{budget:number;spent:number;exceeded:number;month:string}}}>('select save_daily_expense_with_budget_alert($1,$2,$3,$4,$5,null,$6) as result',[id,'Alerta teste',amount,cat,date,expected]);
+ return {id,alert:r.rows[0].result.budgetAlert}
+}
+async function alertBudget(name:string,limit=100,month:string|null='2028-01') {
+ const id=uuid();await db.query('insert into daily_budgets(id,user_id,descricao,valor_mensal,mes_referencia) values($1,$2,$3,$4,$5)',[id,owner,name,limit,month]);
+ return (await db.query<{id:string}>('select id from expense_categories where name=$1',[name])).rows[0].id
+}
+it('alerts only on crossing, saves once, rearms after deletion and honors idempotency',async()=>{
+ const cat=await alertBudget('Combustível alerta')
+ expect((await alertSave(100,cat)).alert).toBeNull()
+ const over=await alertSave(10,cat,'2028-01-02')
+ expect(over.alert).toMatchObject({budget:100,spent:110,exceeded:10,month:'2028-01'})
+ expect((await alertSave(10,cat,'2028-01-02',over.id)).alert).toBeNull()
+ const later=await alertSave(5,cat,'2028-01-03');expect(later.alert).toBeNull()
+ await db.query('select delete_daily_expense($1,$2)',[over.id,await timestamp(over.id)])
+ await db.query('select delete_daily_expense($1,$2)',[later.id,await timestamp(later.id)])
+ expect((await alertSave(1,cat,'2028-01-04')).alert?.exceeded).toBe(1)
+ expect(await actual('2028-01-02')).toBeNull()
+})
+it('edits rearm crossings; description edits while over do not alert',async()=>{
+ const cat=await alertBudget('Edição alerta');const item=await alertSave(90,cat,'2028-01-05')
+ expect((await alertSave(110,cat,'2028-01-05',item.id,await timestamp(item.id))).alert?.exceeded).toBe(10)
+ expect((await alertSave(110,cat,'2028-01-05',item.id,await timestamp(item.id))).alert).toBeNull()
+ expect((await alertSave(80,cat,'2028-01-05',item.id,await timestamp(item.id))).alert).toBeNull()
+ expect((await alertSave(105,cat,'2028-01-05',item.id,await timestamp(item.id))).alert?.exceeded).toBe(5)
+ expect(await actual('2028-01-05')).toBe('105.00')
+})
+it('moves categories/months, respects month-specific budgets and ignores missing budgets',async()=>{
+ const cat=await alertBudget('Mudança alerta');const free=uuid()
+ await db.query('insert into expense_categories(id,user_id,name) values($1,$2,$3)',[free,owner,'Sem limite alerta'])
+ const item=await alertSave(110,free,'2028-01-06');expect(item.alert).toBeNull()
+ expect((await alertSave(110,cat,'2028-01-06',item.id,await timestamp(item.id))).alert?.exceeded).toBe(10)
+ expect((await alertSave(110,cat,'2028-02-06',item.id,await timestamp(item.id))).alert).toBeNull()
+ expect((await alertSave(110,cat,'2028-01-06',item.id,await timestamp(item.id))).alert?.exceeded).toBe(10)
+ expect((await alertSave(1000,null,'2028-01-07')).alert).toBeNull()
+})
+it('handles zero and summed recurring/monthly budgets and denies anon execution',async()=>{
+ const zero=await alertBudget('Zero alerta',0)
+ expect((await alertSave(1,zero,'2028-01-08')).alert?.exceeded).toBe(1)
+ const cat=await alertBudget('Soma alerta',50,null);await alertBudget('Soma alerta',50)
+ expect((await alertSave(100,cat,'2028-01-09')).alert).toBeNull()
+ expect((await alertSave(5,cat,'2028-01-10')).alert?.budget).toBe(100)
+ await db.exec('RESET ROLE; SET ROLE anon;')
+ await expect(alertSave(1,cat)).rejects.toThrow(/permission/)
+ await login(other);expect((await alertSave(1,null,'2028-01-11')).alert).toBeNull()
  await login()
 })

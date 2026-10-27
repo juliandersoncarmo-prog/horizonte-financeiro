@@ -98,3 +98,30 @@ it('preserves the selected date when registering from history',async()=>{
  await act(()=>document.querySelector<HTMLButtonElement>('.expenses-history .expenses-secondary')!.click())
  expect(Number(document.querySelector<HTMLInputElement>('input[type=date]')!.value.slice(8))).toBe(Number(selected))
 })
+
+it('shows the budget warning after saving and waits for acknowledgment in quick add',async()=>{
+ const close=vi.fn()
+ m.save.mockResolvedValue({success:true,budgetAlert:{category:'Combustível',budget:100,spent:110,exceeded:10,month:date.slice(0,7)}})
+ await act(()=>root.render(<DailyExpenses quickAdd onQuickClose={close} key="alert-quick"/>))
+ // Use a populated edit form so the save input is valid.
+ const description=document.querySelector<HTMLInputElement>('input[maxLength="200"]')!
+ const amount=document.querySelector<HTMLInputElement>('input[inputMode="decimal"]')!
+ const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!
+ await act(()=>{set.call(description,'Combustível');description.dispatchEvent(new Event('input',{bubbles:true}));description.dispatchEvent(new Event('change',{bubbles:true}));set.call(amount,'10');amount.dispatchEvent(new Event('input',{bubbles:true}));amount.dispatchEvent(new Event('change',{bubbles:true}))})
+ await click('Salvar gasto')
+ expect(document.querySelector('[aria-label="Orçamento ultrapassado"]')).not.toBeNull()
+ expect(document.body.textContent).toContain('Você ultrapassou em')
+ expect(document.body.textContent).toContain('Combustível')
+ expect(close).not.toHaveBeenCalled()
+ await click('Entendi');expect(close).toHaveBeenCalledTimes(1)
+})
+it('never shows retroactive budget warnings when opening history',()=>{
+ expect(document.querySelector('[aria-label="Orçamento ultrapassado"]')).toBeNull()
+})
+it('opens compact actions and preserves edit and deletion dialogs',async()=>{
+ await click('Opções de Café');expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Opções de Café')
+ await click('Editar');expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Editar gasto')
+ await click('Cancelar');await click('Opções de Café');await click('Excluir')
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toContain('Excluir')
+ expect(m.del).not.toHaveBeenCalled()
+})
