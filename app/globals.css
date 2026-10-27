@@ -485,3 +485,52 @@ body {
 .expenses-confirm-options { display:grid; gap:12px; margin:20px 0; }
 .expenses-confirm-options button { display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:14px; }
 @media(max-width:600px) { .expenses-calendar-grid { margin-top:10px; gap:2px; } .expenses-weekday { padding:4px 0; } }
+
+/* Gastos do Diário: readable hierarchy, scoped to this module and its portals. */
+.daily-expenses-page { font-size:15px; line-height:1.5; }
+.expenses-heading p,.expenses-help,.expenses-empty { color:var(--text-2); font-size:14px; }
+.expenses-panel h2,.expenses-form h2 { font-size:18px; line-height:1.4; }
+.expenses-panel h3 { font-size:15px; }
+.expenses-kpis { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.expenses-kpis span { font-size:14px; line-height:1.4; }
+.expenses-kpis strong { font-size:25px; line-height:1.25; white-space:nowrap; }
+.expenses-kpis small { font-size:13px; color:var(--text-2); line-height:1.5; }
+.expenses-primary,.expenses-secondary,.expenses-danger { font-size:15px; min-height:44px; }
+.expenses-danger { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; background:var(--red); color:#fff; font-weight:600; }
+.expenses-month-nav input,.expenses-month-nav button { font-size:15px; min-height:44px; }
+.expenses-calendar-grid button { font-size:15px; min-height:44px; }
+.expenses-weekday { font-size:13px; }
+.expenses-calendar-grid small { font-size:11px; }
+.expenses-item-copy strong,.expenses-item-amount { font-size:16px; }
+.expenses-item-copy small,.expense-category-tag { font-size:13px; }
+.expenses-day-total,.expenses-adjustment,.expenses-form label,.expenses-error,.expenses-notice { font-size:14px; }
+.expenses-form { min-width:0; }
+.expenses-form>p,.expenses-reconcile p { font-size:15px; line-height:1.65; white-space:normal; overflow-wrap:anywhere; }
+.expenses-delete-copy { max-width:100%; }
+.expenses-form .expenses-secondary { background:var(--surface-2); color:var(--text); border:1px solid var(--border-strong); }
+.expenses-progress { margin-top:18px; }
+.expenses-progress-track { height:7px; border-radius:99px; overflow:hidden; background:var(--border); position:relative; }
+.expenses-progress-track>span { display:block; height:100%; background:var(--accent); border-radius:inherit; }
+.expenses-progress.is-over .expenses-progress-track>span { background:var(--red); }
+.expenses-progress-track>i { position:absolute; inset:0 0 0 80%; background:repeating-linear-gradient(120deg,transparent 0 4px,rgba(255,255,255,.45) 4px 7px); border-left:2px solid var(--surface); }
+.expenses-progress p { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; font-size:13px; color:var(--text-2); margin-top:8px; }
+.expenses-progress.is-over p { color:var(--red); }
+.expenses-categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:12px; margin-top:12px; }
+.expenses-categories li { display:block; padding:16px; border:1px solid var(--border); border-radius:12px; min-width:0; background:var(--surface-2); }
+.expenses-categories .expenses-category-head { text-align:left; }
+.expenses-category-values { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin-top:12px; text-align:left!important; }
+.expenses-category-values strong { font-size:19px; }
+.expenses-category-values>span { font-size:14px; color:var(--text-2); }
+.expenses-categories .expenses-progress { margin-top:12px; }
+@media(max-width:600px) {
+ .expenses-kpis { grid-template-columns:1fr; gap:8px; }
+ .expenses-kpis>div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:14px 12px; align-items:center; }
+ .expenses-kpis span { font-size:14px; }
+ .expenses-kpis strong { font-size:23px; margin:0; }
+ .expenses-kpis small { grid-column:1 / -1; font-size:13px; }
+ .expenses-item-amount { max-width:100%; white-space:nowrap; }
+ .expenses-history .expenses-section-heading>.expenses-secondary { width:100%; }
+ .expenses-form-actions>button { flex:1; }
+ .expenses-form label { font-size:14px; }
+}
+@media(max-width:359px) { .expenses-kpis>div { grid-template-columns:1fr; } .expenses-kpis strong { font-size:23px; } }
