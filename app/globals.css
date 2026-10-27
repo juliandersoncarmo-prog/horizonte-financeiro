@@ -572,10 +572,30 @@ body {
  .expenses-item-more { display:flex; align-items:center; justify-content:center; width:44px; height:44px; color:var(--text-2); border-radius:8px; }
  .expenses-list .expenses-item-copy { flex-basis:auto; }
  .expenses-month-nav { grid-template-columns:44px minmax(0,1fr) 44px; }
- .expenses-month-nav>button:last-child { grid-column:1 / -1; justify-self:end; }
+
  .expenses-month-picker { font-size:16px; }
 }
 @media(max-width:359px) {
  .mobile-bottom-nav>a,.mobile-bottom-nav>button:not(.mobile-add) { gap:3px; font-size:11px; }
  .mobile-bottom-nav svg { width:16px; height:16px; }
+}
+
+/* Final scoped refinements: retain desktop placement and mobile reading order. */
+.expenses-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+.expenses-heading>div:first-child { grid-area:1 / 1; min-width:0; }
+.expenses-heading>.expenses-primary { grid-area:1 / 2; }
+.expenses-heading>.expenses-month-nav { grid-area:2 / 1 / 3 / -1; margin:4px 0 20px; grid-template-columns:44px minmax(0,240px) 44px; }
+.expenses-day-total { border-top:1px solid var(--border); align-items:baseline; flex-wrap:wrap; gap:6px 12px; }
+.expenses-list li:last-child { border-bottom:0; }
+.expenses-day-total>span { flex:1 1 120px; min-width:0; }
+.expenses-day-total>strong { margin-left:auto; text-align:right; font-size:20px; font-weight:650; font-variant-numeric:tabular-nums; max-width:100%; overflow-wrap:anywhere; }
+.expenses-action-menu { position:fixed; z-index:110; width:144px; max-width:calc(100vw - 16px); padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text); box-shadow:0 6px 24px #0002; }
+.expenses-action-menu button { display:flex; align-items:center; gap:9px; width:100%; min-height:44px; padding:8px 10px; border-radius:6px; text-align:left; font-size:14px; }
+.expenses-action-menu button:last-child { color:var(--red); }
+.expenses-action-menu button:hover,.expenses-action-menu button:focus-visible { background:var(--surface-2); outline:2px solid var(--accent); outline-offset:-2px; }
+@media(max-width:640px) {
+ .expenses-heading { grid-template-columns:minmax(0,1fr); gap:12px; margin-bottom:20px; }
+ .expenses-heading>div:first-child { grid-area:1 / 1; }
+ .expenses-heading>.expenses-month-nav { grid-area:2 / 1; grid-template-columns:44px minmax(0,1fr) 44px; margin:0; }
+ .expenses-heading>.expenses-primary { grid-area:3 / 1; width:100%; }
 }
