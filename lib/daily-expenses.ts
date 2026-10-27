@@ -35,9 +35,19 @@ export function expenseSummary(month: string, data: ExpenseMonth) {
 }
 
 export interface Reconciliation { total: number; remaining: number; delta: number }
-export function categoryTone(id: string | null) {
- let hash=0; for(const ch of id??'') hash=(hash*31+ch.charCodeAt(0))>>>0
- return `expense-tone-${hash%8}`
+/** Pure identity-based colors: no finite palette, list position, name or storage dependency.
+ * Separate hue/chroma/lightness entropy prevents the former modulo-eight collisions.
+ * The same UUID retains its color through rename, month changes and new categories.
+ */
+export function categoryStyle(id: string | null): Record<string,string> {
+ const identity=id??'uncategorized'
+ let hash=2166136261, secondary=5381
+ for(const char of identity) {hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;secondary=(Math.imul(secondary,33)^char.charCodeAt(0))>>>0}
+ hash=Math.imul(hash^(hash>>>16),0x85ebca6b)>>>0;hash=Math.imul(hash^(hash>>>13),0xc2b2ae35)>>>0;hash=(hash^(hash>>>16))>>>0
+ const hue=(hash/4294967296*360).toFixed(6)
+ const saturation=(32+secondary%2400/100).toFixed(2)
+ const lightness=(92+(secondary>>>12)%400/100).toFixed(2)
+ return {'--category-bg':`hsl(${hue} ${saturation}% ${lightness}%)`,'--category-fg':`hsl(${hue} ${saturation}% 28%)`,'--category-dark-bg':`hsl(${hue} 25% 19%)`,'--category-dark-fg':`hsl(${hue} ${saturation}% 80%)`}
 }
 export function categoryBudgets(data: ExpenseMonth) {
  const result: Record<string,number>={}
