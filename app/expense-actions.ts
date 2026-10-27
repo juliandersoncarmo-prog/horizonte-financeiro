@@ -2,7 +2,7 @@
 import { createUserDataClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { validExpense, validExpenseDate, validUUID } from '@/lib/daily-expenses'
-import type { ExpenseInput, ExpenseMonth } from '@/lib/daily-expenses'
+import type { ExpenseInput, ExpenseMonth, BudgetAlert } from '@/lib/daily-expenses'
 
 async function session() {
  if(process.env.GASTOS_DIARIO_ENABLED!=='true' || process.env.DIARIO_INTELIGENTE_ENABLED!=='true') throw new Error('Gastos do Diário ainda não está disponível nesta versão.')
@@ -42,7 +42,7 @@ export async function saveExpense(input: ExpenseInput) {
  try {
   if(!validExpense(input)) throw new Error('Informe descrição, valor positivo com até dois decimais e data válida.')
   const {db}=await session()
-  const {error}=await db.rpc('save_daily_expense',{p_id:input.id,p_description:input.description.trim(),p_amount:input.amount,p_category:input.category_id,p_date:input.expense_date,p_reconcile:input.reconcile&&input.reconciliation?`${input.reconcile}:${input.reconciliation.total.toFixed(2)}:${input.reconciliation.remaining.toFixed(2)}`:null,p_expected:input.expected??null})
+  const {data:outcome,error}=await db.rpc('save_daily_expense_with_budget_alert',{p_id:input.id,p_description:input.description.trim(),p_amount:input.amount,p_category:input.category_id,p_date:input.expense_date,p_reconcile:input.reconcile&&input.reconciliation?`${input.reconcile}:${input.reconciliation.total.toFixed(2)}:${input.reconciliation.remaining.toFixed(2)}`:null,p_expected:input.expected??null})
   if(error) {
    if(error.message.includes('RECONCILE_REQUIRED')) {
     let reconciliation: import('@/lib/daily-expenses').Reconciliation | undefined
@@ -52,7 +52,7 @@ export async function saveExpense(input: ExpenseInput) {
    return {success:false,error:error.message}
   }
   revalidatePath('/','layout')
-  return {success:true}
+  return {success:true,budgetAlert:(outcome?.budgetAlert??null) as BudgetAlert|null}
  } catch(error) {return {success:false,error:message(error)}}
 }
 export async function removeExpense(id: string,expected: string) {

@@ -11,7 +11,7 @@ beforeEach(()=>{
 })
 it('uses the authenticated RPC without accepting a client owner',async()=>{
  expect((await saveExpense(input)).success).toBe(true)
- expect(m.rpc).toHaveBeenCalledWith('save_daily_expense',{p_id:input.id,p_description:'Café',p_amount:10,p_category:null,p_date:input.expense_date,p_reconcile:null,p_expected:null})
+ expect(m.rpc).toHaveBeenCalledWith('save_daily_expense_with_budget_alert',{p_id:input.id,p_description:'Café',p_amount:10,p_category:null,p_date:input.expense_date,p_reconcile:null,p_expected:null})
  expect(m.revalidate).toHaveBeenCalledWith('/','layout')
 })
 it('propagates reconciliation before claiming success',async()=>{
@@ -50,6 +50,12 @@ it('paginates history and includes ownership and month boundaries',async()=>{
 it('passes the exact server quote back and exposes fresh conflict details',async()=>{
  m.rpc.mockResolvedValue({error:{message:'RECONCILE_REQUIRED',details:JSON.stringify({total:100,remaining:70,delta:30})}})
  const result=await saveExpense({...input,reconcile:'included',reconciliation:{total:100,remaining:70,delta:30}})
- expect(m.rpc).toHaveBeenCalledWith('save_daily_expense',expect.objectContaining({p_reconcile:'included:100.00:70.00'}))
+ expect(m.rpc).toHaveBeenCalledWith('save_daily_expense_with_budget_alert',expect.objectContaining({p_reconcile:'included:100.00:70.00'}))
  expect(result).toMatchObject({success:false,reconcile:true,reconciliation:{total:100,remaining:70,delta:30}})
+})
+
+it('returns the atomic budget crossing only on a successful save',async()=>{
+ const budgetAlert={category:'Combustível',budget:100,spent:110,exceeded:10,month:'2026-10'}
+ m.rpc.mockResolvedValue({data:{id:input.id,budgetAlert},error:null})
+ expect(await saveExpense(input)).toMatchObject({success:true,budgetAlert})
 })

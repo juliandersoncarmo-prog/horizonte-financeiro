@@ -51,3 +51,5 @@ export function shiftExpenseDate(date: string, days: number) {
  const next=new Date(date+'T12:00:00Z');next.setUTCDate(next.getUTCDate()+days)
  const value=next.toISOString().slice(0,10);return validExpenseDate(value)?value:date
 }
+
+export interface BudgetAlert { category: string; budget: number; spent: number; exceeded: number; month: string }
