@@ -4,6 +4,7 @@ import { createContext, useContext, useRef, useState } from 'react'
 import { runProjection } from '@/lib/engine/projection'
 import type { ProjectionInput, ProjectionResult } from '@/types'
 import LedgerView from './LedgerView'
+import { ExpenseCacheProvider } from './ExpenseCacheProvider'
 
 const DailyEditorContext = createContext<{ date: string | null; open: (date: string) => boolean; close: () => void; setSaving: (busy: boolean) => void } | null>(null)
 export function useDailyEditor() {
@@ -31,7 +32,7 @@ export function ProjectionProvider({ projection, children }: { projection: Proje
   }
   const [date, setDate] = useState<string | null>(null)
   const saving = useRef(false)
-  return <ProjectionContext.Provider value={state}><ProjectionUpdateContext.Provider value={update}><DailyEditorContext.Provider value={{ date, setSaving: busy => { saving.current = busy }, open: next => { if (saving.current) return false; setDate(next); return true }, close: () => setDate(null) }}>{children}</DailyEditorContext.Provider></ProjectionUpdateContext.Provider></ProjectionContext.Provider>
+  return <ExpenseCacheProvider><ProjectionContext.Provider value={state}><ProjectionUpdateContext.Provider value={update}><DailyEditorContext.Provider value={{ date, setSaving: busy => { saving.current = busy }, open: next => { if (saving.current) return false; setDate(next); return true }, close: () => setDate(null) }}>{children}</DailyEditorContext.Provider></ProjectionUpdateContext.Provider></ProjectionContext.Provider></ExpenseCacheProvider>
 }
 export function useOptionalProjection() { return useContext(ProjectionContext) }
 export function useProjection() {

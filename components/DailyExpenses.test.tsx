@@ -26,10 +26,10 @@ it('renders selected date, calendar, daily history, monthly breakdown and naviga
 })
 it('requires confirmation to delete and sends the concurrency token',async()=>{
  await click('Excluir Café');expect(m.del).not.toHaveBeenCalled();expect(document.querySelector('[role=dialog]')).not.toBeNull()
- await click('Excluir gasto');expect(m.del).toHaveBeenCalledWith(item.id,item.updated_at);expect(m.refresh).toHaveBeenCalled()
+ await click('Excluir');expect(m.del).toHaveBeenCalledWith(item.id,item.updated_at);expect(m.refresh).toHaveBeenCalled()
 })
 it('opens the existing shared accessible modal with default date and closes without writes',async()=>{
- await click('Novo gasto');expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
+ await click('Registrar gasto');expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
  expect(document.querySelector('[role=dialog]')?.getAttribute('aria-modal')).toBe('true')
  expect(document.activeElement?.getAttribute('data-hf-initial-focus')).toBe('true')
  await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
@@ -67,13 +67,34 @@ it('arrows cross month/year boundaries but ignore forms and modals',async()=>{
  expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2027-01')
  await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true})))
  expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
- await click('Novo gasto')
+ await click('Registrar gasto')
  await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})))
  expect(document.querySelector<HTMLInputElement>('input[type=month]')?.value).toBe('2026-12')
 })
 it('quick add opens only the expense form with today filled',async()=>{
  await act(()=>root.render(<DailyExpenses quickAdd key="quick"/>))
- expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Novo gasto do Diário')
+ expect(document.querySelector('[role=dialog]')?.getAttribute('aria-label')).toBe('Registrar gasto')
  expect(document.querySelector<HTMLInputElement>('input[type=date]')?.value).toBe(date)
  expect(document.querySelector('.expenses-calendar')).toBeNull()
+})
+
+it('keeps the monthly data visible without refetching on focus',async()=>{
+ const calls=m.load.mock.calls.length
+ await act(()=>window.dispatchEvent(new Event('focus')))
+ expect(m.load).toHaveBeenCalledTimes(calls)
+ expect(document.body.textContent).not.toContain('Carregando histórico')
+ expect(document.body.textContent).toContain('Café')
+})
+it('uses a signed balance and a budget progress bar, without duplicate monthly totals',async()=>{
+ expect(document.body.textContent).toContain('Saldo do Diário')
+ expect(document.querySelector('[role=progressbar][aria-label="Orçamento diário consumido"]')).not.toBeNull()
+ const monthly=document.querySelector('[aria-label="Resumo mensal"]')!
+ expect(monthly.textContent).toContain('Gastos registrados')
+ expect(monthly.textContent).not.toContain('Total gasto')
+})
+it('preserves the selected date when registering from history',async()=>{
+ await act(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true})))
+ const selected=document.querySelector<HTMLButtonElement>('.expenses-calendar-grid .selected')!.textContent!.replace(/[^0-9]/g,'')
+ await act(()=>document.querySelector<HTMLButtonElement>('.expenses-history .expenses-secondary')!.click())
+ expect(Number(document.querySelector<HTMLInputElement>('input[type=date]')!.value.slice(8))).toBe(Number(selected))
 })
