@@ -637,8 +637,14 @@ body {
 .expenses-calendar-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
 .expenses-calendar-heading h2 { margin:0; font-size:15px; }
 .expenses-calendar-heading > span { color:var(--text-3); font-size:12px; white-space:nowrap; margin-left:auto; }
-/* Keep the current day in the table while the KPIs remain accessible above. */
+/* One mobile page scroller: KPIs flow away; only the table heading sticks.
+   The app header sits outside ledger-view, so top:0 is below it. Avoid overflow
+   ancestors between the heading and ledger-view (including overflow-x:auto,
+   which also creates a vertical scroll container). */
 @media (max-width:639px) {
- .ledger-months .month-scroll::-webkit-scrollbar { width:0; }
- .ledger-months .month-scroll { overflow-y:auto; max-height:clamp(200px, 42dvh, 420px); overscroll-behavior-y:contain; scrollbar-width:none; }
+ .ledger-view { min-height:0; scroll-behavior:auto; overflow-anchor:none; }
+ .ledger-months > .month-card { overflow:visible; }
+ .ledger-months .month-table-viewport { overflow:visible; }
+ .ledger-months .month-scroll { overflow:visible; max-height:none; overscroll-behavior-y:auto; }
+ .ledger-months .month-table-heading { position:sticky; top:0; z-index:20; }
 }
