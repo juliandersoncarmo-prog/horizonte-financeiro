@@ -159,7 +159,8 @@ it('swipes calendar once per gesture, preserves vertical scroll and buttons, and
  expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2026-12')
  await swipe(document.querySelector('.expenses-calendar')!,10,100)
  await swipe(document.querySelector('.expenses-calendar-grid button')!,-100)
- expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2026-12')
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ await swipe(document.querySelector('.daily-expenses-page')!,100)
  await click('Próximo mês');expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
  expect(document.body.textContent).not.toContain('gasto(s) registrado(s)')
  expect(formatExpenseMonth('2026-10')).toBe('Outubro de 2026')
@@ -170,4 +171,40 @@ it.each([[1266,4000,'31,65%',2734,false],[4500,4000,'112,5%',500,true],[0,0,null
  if(percent) {expect(host.textContent).toContain(percent);expect(Number(bar?.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(100);expect(host.textContent).toContain(over?'Excedido':'Disponível');expect(host.textContent).toContain(remaining.toLocaleString('pt-BR',{minimumFractionDigits:2}))}
  else {expect(bar).toBeNull();expect(host.textContent).toContain('Sem orçamento definido');expect(host.textContent).not.toContain('%')}
  expect(host.querySelector('.is-over')!==null).toBe(over)
+})
+
+function selectedDay(){return document.querySelector('.expenses-calendar-grid [aria-pressed="true"] > span')?.textContent}
+it('keeps the day across months, clamps February and remembers explicit choices',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2028-01-31" key="month-days"/>))
+ await click('Próximo mês');expect(selectedDay()).toBe('29')
+ await click('Mês anterior');expect(selectedDay()).toBe('29')
+ await act(()=>document.querySelectorAll<HTMLButtonElement>('.expenses-calendar-grid button')[30].click())
+ await click('Próximo mês');expect(selectedDay()).toBe('29')
+ await click('Próximo mês');expect(selectedDay()).toBe('31')
+ expect(document.querySelector('.expenses-calendar-heading')?.textContent).toContain('Março de 2028')
+})
+it('returns to local today unless the current month has an explicit selection, resetting on remount',async()=>{
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+ await click('Próximo mês');await click('Mês anterior')
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+ await act(()=>document.querySelectorAll<HTMLButtonElement>('.expenses-calendar-grid button')[4].click())
+ await click('Próximo mês');await click('Mês anterior');expect(selectedDay()).toBe('5')
+ await act(()=>root.render(<DailyExpenses key="fresh-visit"/>))
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
+})
+it('swipes from cards, history and empty page regions without intercepting controls or vertical scrolling',async()=>{
+ Object.defineProperty(window,'innerWidth',{value:390,configurable:true})
+ const original=document.querySelector<HTMLInputElement>('input[type=month]')!.value
+ await swipe(document.querySelector('.expenses-kpis')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).not.toBe(original)
+ await swipe(document.querySelector('.expenses-history')!,100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(original)
+ await swipe(document.querySelector('.daily-expenses-page')!,10,100)
+ await swipe(document.querySelector('.expenses-primary')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(original)
+})
+it('resolves the opening date in the browser instead of retaining the server fallback date',async()=>{
+ await act(()=>root.render(<DailyExpenses initialDate="2000-01-01" resolveLocalDate key="browser-date"/>))
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe(date.slice(0,7))
+ expect(selectedDay()).toBe(String(Number(date.slice(8))))
 })

@@ -60,3 +60,16 @@ it('keeps main destinations in order and settings/logout together in footer',asy
  await act(()=>document.querySelector<HTMLButtonElement>('.mobile-new-investment')!.click())
  expect(document.body.textContent).toContain('Formulário investimento')
 })
+
+it.each(['/configuracoes','/gastos-do-diario','/'])('closes the mobile drawer on navigation to %s including footer links',async href=>{
+ await render(<Sidebar/>)
+ await act(()=>host.querySelector<HTMLButtonElement>('[aria-label="Abrir menu"]')!.click())
+ const drawer=document.querySelector('.mobile-drawer')!
+ expect(drawer).not.toBeNull()
+ // Keep the test in this document; the actual link and href remain intact.
+ const link=drawer.querySelector<HTMLAnchorElement>(`a[href="${href}"]`)!
+ link.addEventListener('click',e=>e.preventDefault())
+ await act(()=>link.click())
+ expect(document.querySelector('.mobile-drawer')).toBeNull()
+ expect(host.querySelector('.desktop-sidebar')).not.toBeNull()
+})

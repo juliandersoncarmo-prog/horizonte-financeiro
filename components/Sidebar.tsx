@@ -171,7 +171,7 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
     </ModalPortal>}
     <aside className="desktop-sidebar w-60 flex-none flex flex-col border-r border-border bg-surface h-full">{content}</aside>
     {menuOpen && <ModalPortal label="Menu de navegação" onClose={() => setMenuOpen(false)}>
-      <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, nav a')) setMenuOpen(false) }}>
+      <aside className="mobile-drawer bg-surface flex flex-col" onClick={event => { if ((event.target as Element).closest('nav button, a[href]')) setMenuOpen(false) }}>
         <button className="self-end p-3" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>
         {content}
       </aside>

@@ -6,9 +6,10 @@ const INTERACTIVE = 'button, a, input, textarea, select, [contenteditable]:not([
 type Gesture = { x: number; y: number; id: number; horizontal: boolean }
 
 /** One month per deliberate horizontal touch gesture; vertical scroll stays native. */
-export function useMobileSwipe(navigate: (direction: -1 | 1) => void, blocked?: () => boolean) {
+export function useMobileSwipe(navigate: (direction: -1 | 1) => void, blocked?: () => boolean, swipeSurface?: string) {
   const gesture = useRef<Gesture | null>(null)
   const suppressClickUntil = useRef(0)
+  const suppressTarget = useRef<EventTarget | null>(null)
   function available() { return window.innerWidth < 640 && !blocked?.() }
   function movement(event: TouchEvent<HTMLElement>) {
     const start = gesture.current
@@ -26,7 +27,9 @@ export function useMobileSwipe(navigate: (direction: -1 | 1) => void, blocked?: 
   return {
     onTouchStart(event: TouchEvent<HTMLElement>) {
       gesture.current = null
-      if (!available() || event.touches.length !== 1 || (event.target as Element).closest(INTERACTIVE)) return
+      if (!available() || event.touches.length !== 1) return
+      const target = event.target as Element
+      if (target.closest(INTERACTIVE) && !(swipeSurface && target.closest(swipeSurface))) return
       if (document.activeElement?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
       const touch = event.touches[0]
       gesture.current = { x: touch.clientX, y: touch.clientY, id: touch.identifier, horizontal: false }
@@ -40,13 +43,13 @@ export function useMobileSwipe(navigate: (direction: -1 | 1) => void, blocked?: 
       gesture.current = null
       if (!move || !available() || event.touches.length || !move.start.horizontal) return
       // Block the trailing click so a drag never opens a day or edits a field.
-      if (Math.abs(move.dx) >= 12) suppressClickUntil.current = Date.now() + 400
+      if (Math.abs(move.dx) >= 12) { suppressClickUntil.current = Date.now() + 400; suppressTarget.current = event.target }
       if (Math.abs(move.dx) < 56 || Math.abs(move.dx) <= Math.abs(move.dy) * 1.5) return
       navigate(move.dx < 0 ? 1 : -1)
     },
     onTouchCancel() { gesture.current = null },
     onClickCapture(event: MouseEvent<HTMLElement>) {
-      if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); suppressClickUntil.current = 0 }
+      if (Date.now() < suppressClickUntil.current && event.target === suppressTarget.current) { event.preventDefault(); event.stopPropagation(); suppressClickUntil.current = 0 }
     },
   }
 }

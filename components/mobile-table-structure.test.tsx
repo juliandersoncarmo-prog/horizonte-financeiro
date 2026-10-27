@@ -68,3 +68,26 @@ it('preserves month swipes when content fits and scrolls exceptional overflow wi
  await act(() => row.click()); expect(select).not.toHaveBeenCalled()
  await touch('touchstart', 120); await touch('touchend', 120); await act(() => row.click()); expect(select).toHaveBeenCalledTimes(1)
 })
+
+it('positions only the internal list once and leaves manual scrolling untouched after updates', async () => {
+ const frames:FrameRequestCallback[]=[]
+ vi.stubGlobal('requestAnimationFrame',(cb:FrameRequestCallback)=>{frames.push(cb);return frames.length})
+ vi.stubGlobal('cancelAnimationFrame',vi.fn())
+ const projection=runProjection({settings:{saldo_abertura:1000,data_ancora:'2026-10-01'},recurringRules:[],transactions:[],dailyBudgets:[],horizonMonths:1})
+ const month=projection.months[0]
+ month.days=month.days.map(d=>({...d,isToday:d.day===27}))
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ const draw=()=>root.render(<MonthColumn month={{...month}} selectedDate={null} onDaySelect={vi.fn()} mode="diario" onModeChange={vi.fn()}/>)
+ cleanup=()=>{act(()=>root.unmount());vi.unstubAllGlobals()}
+ await act(draw)
+ const scroll=host.querySelector<HTMLElement>('.month-scroll')!
+ Object.defineProperties(scroll,{clientHeight:{value:200},scrollHeight:{value:1240}})
+ vi.spyOn(scroll,'getBoundingClientRect').mockReturnValue({top:300} as DOMRect)
+ vi.spyOn(host.querySelector('[data-today]')!,'getBoundingClientRect').mockReturnValue({top:1340} as DOMRect)
+ await act(()=>frames.shift()!(0))
+ expect(scroll.scrollTop).toBeGreaterThan(900)
+ scroll.scrollTop=40
+ await act(draw)
+ expect(frames).toHaveLength(0)
+ expect(scroll.scrollTop).toBe(40)
+})

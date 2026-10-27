@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import ChoiceField from './ChoiceField'
 
 import { exhaustedDailyBudget } from '@/lib/daily-budget-status'
@@ -45,6 +45,23 @@ export default function MonthColumn({
   // Overflow uses the existing gesture boundary only when content needs scrolling.
   const scrollTouch = useRef<{ x: number; y: number; left: number } | null>(null)
   const dragged = useRef(false)
+  const rows = useRef<HTMLDivElement>(null)
+  const positioned = useRef(false)
+  const interacted = useRef(false)
+  useEffect(() => {
+    if (positioned.current || interacted.current) return
+    const frame = requestAnimationFrame(() => {
+      if (interacted.current || !rows.current) return
+      const row = rows.current.querySelector<HTMLElement>('[data-today="true"]')
+      if (!row) return
+      const viewport = rows.current
+      if (viewport.scrollHeight <= viewport.clientHeight) return
+      // Scroll only this table, never the page or the financial indicators.
+      viewport.scrollTop += row.getBoundingClientRect().top - viewport.getBoundingClientRect().top - viewport.clientHeight / 3
+      positioned.current = true
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [month])
   const exhausted = exhaustedDailyBudget(month)
   return (
     <div className={`month-card flex flex-col border border-border rounded-xl shadow-sm bg-surface h-full overflow-hidden ${className ?? ''}`}>
@@ -97,7 +114,7 @@ export default function MonthColumn({
       </div>
 
       {/* Day rows */}
-      <div className="flex-1 overflow-y-auto month-scroll">
+      <div ref={rows} className="flex-1 overflow-y-auto month-scroll" onTouchStart={()=>{interacted.current=true}} onWheel={()=>{interacted.current=true}} onPointerDown={()=>{interacted.current=true}} onKeyDown={()=>{interacted.current=true}}>
         {month.days.map(day => {
           const color      = balanceColor(day.saldo, hasData)
           const isSelected = day.date === selectedDate
@@ -108,6 +125,7 @@ export default function MonthColumn({
           return (
             <div
               key={day.date}
+              data-today={day.isToday || undefined}
               onClick={() => onDaySelect(day.date)}
               className={[
                 'month-day-row w-full grid grid-cols-[72px_1fr_96px] h-9 items-center px-3 text-left transition-colors',
