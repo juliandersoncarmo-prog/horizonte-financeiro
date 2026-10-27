@@ -150,8 +150,13 @@ export const dailyExpenseDaysTable = pgTable('daily_expense_days', {
 export const dailyExpensesTable = pgTable('daily_expenses', {
  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`), user_id: uuid('user_id').notNull(),
  description: text('description').notNull(), amount: numeric('amount',{precision:15,scale:2}).notNull(),
+ included_amount: numeric('included_amount',{precision:15,scale:2}).notNull().default('0'),
  category_id: uuid('category_id'), expense_date: date('expense_date').notNull(),
  created_at: timestamp('created_at',{withTimezone:true}).notNull().defaultNow(), updated_at: timestamp('updated_at',{withTimezone:true}).notNull().defaultNow(),
 }, t => [index('daily_expenses_owner_date').on(t.user_id,t.expense_date,t.created_at,t.id),
  foreignKey({columns:[t.user_id,t.category_id],foreignColumns:[expenseCategoriesTable.user_id,expenseCategoriesTable.id]}),
  foreignKey({columns:[t.user_id,t.expense_date],foreignColumns:[dailyExpenseDaysTable.user_id,dailyExpenseDaysTable.expense_date]})])
+
+export const budgetExpenseCategoriesTable=pgTable('budget_expense_categories',{
+ user_id:uuid('user_id').notNull(),budget_id:uuid('budget_id').primaryKey().references(()=>dailyBudgetsTable.id,{onDelete:'cascade'}),category_id:uuid('category_id').notNull(),
+},t=>[foreignKey({columns:[t.user_id,t.category_id],foreignColumns:[expenseCategoriesTable.user_id,expenseCategoriesTable.id]})])

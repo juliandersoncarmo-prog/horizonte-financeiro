@@ -1,11 +1,11 @@
 import type { DailyActual, DailyBudget } from '@/types'
 import { dailySchedule } from '@/lib/engine/projection'
 
-export interface DailyExpense { id: string; description: string; amount: number; category_id: string | null; expense_date: string; created_at: string; updated_at: string }
+export interface DailyExpense { id: string; description: string; amount: number; category_id: string | null; expense_date: string; created_at: string; updated_at: string; included_amount?: number }
 export interface ExpenseCategory { id: string; name: string }
 export interface ExpenseDay { expense_date: string; manual_adjustment: number | null; legacy_actual: number | null }
-export interface ExpenseMonth { expenses: DailyExpense[]; categories: ExpenseCategory[]; days: ExpenseDay[]; actuals: DailyActual[]; budgets: DailyBudget[] }
-export interface ExpenseInput { id: string; description: string; amount: number; category_id: string | null; expense_date: string; reconcile?: 'preserve' | 'replace'; expected?: string }
+export interface ExpenseMonth { expenses: DailyExpense[]; categories: ExpenseCategory[]; days: ExpenseDay[]; actuals: DailyActual[]; budgets: DailyBudget[]; budgetCategories?: {budget_id:string;category_id:string}[] }
+export interface ExpenseInput { id: string; description: string; amount: number; category_id: string | null; expense_date: string; reconcile?: 'included' | 'additional'; reconciliation?: Reconciliation; expected?: string }
 export const validUUID = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 export function validExpenseDate(value: unknown): value is string {
  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value<'1900-01-01') return false
@@ -16,7 +16,7 @@ export function validExpense(input: ExpenseInput) {
  return input && validUUID(input.id) && typeof input.description==='string' && input.description.trim().length>0 && input.description.trim().length<=200
  && typeof input.amount==='number' && Number.isFinite(input.amount) && input.amount>0 && input.amount<=999999999
  && Math.abs(input.amount*100-Math.round(input.amount*100))<0.00001 && validExpenseDate(input.expense_date)
- && (input.category_id===null || validUUID(input.category_id)) && (input.reconcile===undefined || ['preserve','replace'].includes(input.reconcile))
+ && (input.category_id===null || validUUID(input.category_id)) && (input.reconcile===undefined || ['included','additional'].includes(input.reconcile))
  && (input.expected===undefined || Number.isFinite(Date.parse(input.expected)))
 }
 export function expenseSummary(month: string, data: ExpenseMonth) {
@@ -32,4 +32,22 @@ export function expenseSummary(month: string, data: ExpenseMonth) {
  return {schedule,byDate,byCategory,totalCents:Object.values(byDate).reduce((a,b)=>a+b,0),
   actualCents:data.actuals.reduce((a,b)=>a+Math.round(b.valor*100),0),
   plannedCents:data.budgets.filter(b=>!b.mes_referencia || b.mes_referencia===month).reduce((a,b)=>a+Math.round(b.valor_mensal*100),0)}
+}
+
+export interface Reconciliation { total: number; remaining: number; delta: number }
+export function categoryTone(id: string | null) {
+ let hash=0; for(const ch of id??'') hash=(hash*31+ch.charCodeAt(0))>>>0
+ return `expense-tone-${hash%8}`
+}
+export function categoryBudgets(data: ExpenseMonth) {
+ const result: Record<string,number>={}
+ for(const link of data.budgetCategories??[]) {
+  const budget=data.budgets.find(b=>b.id===link.budget_id)
+  if(budget) result[link.category_id]=(result[link.category_id]??0)+Math.round(budget.valor_mensal*100)
+ }
+ return result
+}
+export function shiftExpenseDate(date: string, days: number) {
+ const next=new Date(date+'T12:00:00Z');next.setUTCDate(next.getUTCDate()+days)
+ const value=next.toISOString().slice(0,10);return validExpenseDate(value)?value:date
 }
