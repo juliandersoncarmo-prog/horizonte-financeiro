@@ -74,7 +74,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
+      <nav aria-label="Menu principal" className="flex-1 px-3 py-2 flex flex-col gap-0.5">
+        <p className="sidebar-section-label">Navegação principal</p>
         <Link
           href="/"
           className={navBtn(pathname === '/')}
@@ -82,24 +83,6 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           <LayoutDashboard className="w-[18px] h-[18px] flex-none" />
           Visão Geral
         </Link>
-
-        <button
-          onClick={() => setModal('entrada')}
-          className={navBtn(false)}
-        >
-          <TrendingUp className="w-[18px] h-[18px] flex-none" />
-          + Entrada
-        </button>
-
-        <button
-          onClick={() => setModal('saida')}
-          className={navBtn(false)}
-        >
-          <TrendingDown className="w-[18px] h-[18px] flex-none" />
-          + Saída
-        </button>
-
-        <button onClick={() => setModal('investimento')} className={navBtn(false)}><TrendingUp className="w-[18px] h-[18px] flex-none text-accent" />+ Investimento</button>
 
         <button
           onClick={() => setShowDiario(true)}
@@ -121,14 +104,8 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           Resumo Mensal
         </button>
 
-        <Link
-          href="/configuracoes"
-          prefetch={false}
-          className={navBtn(pathname === '/configuracoes')}
-        >
-          <Settings className="w-[18px] h-[18px] flex-none" />
-          Configurações
-        </Link>
+        <p className="sidebar-section-label">Lançamentos</p>
+        <button type="button" onClick={() => setShowAdd(true)} className={navBtn(false)}><Plus className="w-[18px] h-[18px] flex-none" />Novo lançamento</button>
       </nav>
 
       {/* Footer */}
@@ -143,21 +120,17 @@ export default function Sidebar({ profile = { name: 'Minha conta', email: 'Horiz
           </div>
           <button
             onClick={toggleTheme}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text transition-colors flex-none"
+            className="w-11 h-11 flex items-center justify-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text transition-colors flex-none"
+            aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
             title={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
           >
             <span className="text-sm select-none">{theme === 'light' ? '☽' : '☀'}</span>
           </button>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-text-3 hover:text-text hover:bg-surface-2 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5 flex-none" />
-            Sair
-          </button>
-        </form>
+        <div className="sidebar-footer-actions">
+          <Link href="/configuracoes" prefetch={false} aria-label="Configurações" title="Configurações"><Settings size={18}/><span>Configurações</span></Link>
+          <form action={signOut}><button type="submit" aria-label="Sair" title="Sair"><LogOut size={18}/><span>Sair</span></button></form>
+        </div>
       </div>
 
     </>

@@ -1,8 +1,8 @@
-// Browser geometry/interaction fixtures only. Never imported by app routes.
+// Isolated fixtures. Never imported by app routes; no external database access.
 import type { DailyExpense,ExpenseInput,ExpenseCategory } from '@/lib/daily-expenses'
-let expenses:DailyExpense[]=[]
-const categories:ExpenseCategory[]=[]
-export async function loadExpenseMonth(month:string) { return {success:true as const,data:{expenses:expenses.filter(e=>e.expense_date.startsWith(month)),categories:[...categories],days:[],actuals:[...new Set(expenses.map(e=>e.expense_date))].filter(date=>date.startsWith(month)).map(data=>({data,valor:expenses.filter(e=>e.expense_date===data).reduce((s,e)=>s+e.amount,0)})),budgets:[{id:'budget',descricao:'Diário',categoria:'Outros',mes_referencia:null,valor_mensal:3100}]}} }
+let expenses:DailyExpense[]=[{id:'10000000-0000-4000-8000-000000000001',description:'Compra do mês',amount:1266,category_id:'10000000-0000-4000-8000-000000000001',expense_date:'2026-10-27',created_at:'2026-10-27',updated_at:'2026-10-27'}]
+const categories:ExpenseCategory[]=['Mercado','Combustível','Theozin','Cursos','Cabeleireiro','Compras avulsas','Saúde','Lazer','Casa','Outros'].map((name,i)=>({id:`10000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,name}))
+export async function loadExpenseMonth(month:string) { return {success:true as const,data:{expenses:expenses.filter(e=>e.expense_date.startsWith(month)),categories:[...categories],days:[],actuals:[...new Set(expenses.map(e=>e.expense_date))].filter(date=>date.startsWith(month)).map(data=>({data,valor:expenses.filter(e=>e.expense_date===data).reduce((s,e)=>s+e.amount,0)})),budgets:[{id:'budget',descricao:'Diário',categoria:'Outros',mes_referencia:null,valor_mensal:4000}],budgetCategories:categories.map(c=>({budget_id:'budget',category_id:c.id}))}} }
 export async function saveExpense(input:ExpenseInput) {expenses=expenses.filter(e=>e.id!==input.id);expenses.unshift({...input,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});return {success:true}}
 export async function removeExpense(id:string) {expenses=expenses.filter(e=>e.id!==id);return {success:true}}
 export async function createExpenseCategory(name:string) {const category={id:crypto.randomUUID(),name};categories.push(category);return {success:true,category}}

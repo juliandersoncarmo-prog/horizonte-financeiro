@@ -5,7 +5,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest'
 const m=vi.hoisted(()=>({load:vi.fn(),save:vi.fn(),del:vi.fn(),category:vi.fn(),refresh:vi.fn()}))
 vi.mock('@/app/expense-actions',()=>({loadExpenseMonth:m.load,saveExpense:m.save,removeExpense:m.del,createExpenseCategory:m.category}))
 vi.mock('next/navigation',()=>({useRouter:()=>({refresh:m.refresh})}))
-import DailyExpenses from './DailyExpenses'
+import DailyExpenses, {MonthlyBudgetProgress,formatExpenseMonth} from './DailyExpenses'
 vi.stubGlobal('React',React);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
 let root:ReturnType<typeof createRoot>,host:HTMLDivElement
 const date=new Intl.DateTimeFormat('sv-SE').format(new Date())
@@ -141,4 +141,33 @@ it('supports menu keyboard navigation, Escape, outside click and Tab without wri
  await act(()=>document.activeElement?.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true})))
  expect(document.querySelector('[role=menu]')).toBeNull()
  expect(m.save).not.toHaveBeenCalled();expect(m.del).not.toHaveBeenCalled()
+})
+
+async function swipe(target:Element,dx:number,dy=0) {
+ for(const type of ['touchstart','touchmove','touchend']) {
+  const point={identifier:1,clientX:type==='touchstart'?200:200+dx,clientY:type==='touchstart'?100:100+dy}
+  const event=new Event(type,{bubbles:true});Object.defineProperties(event,{touches:{value:type==='touchend'?[]:[point]},changedTouches:{value:[point]}})
+  await act(()=>target.dispatchEvent(event))
+ }
+}
+it('swipes calendar once per gesture, preserves vertical scroll and buttons, and crosses years by arrows',async()=>{
+ Object.defineProperty(window,'innerWidth',{value:390,configurable:true})
+ await act(()=>root.render(<DailyExpenses initialDate="2026-12-01" key="swipe"/>))
+ await swipe(document.querySelector('.expenses-calendar')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ await swipe(document.querySelector('.expenses-calendar')!,100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2026-12')
+ await swipe(document.querySelector('.expenses-calendar')!,10,100)
+ await swipe(document.querySelector('.expenses-calendar-grid button')!,-100)
+ expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2026-12')
+ await click('Próximo mês');expect(document.querySelector<HTMLInputElement>('input[type=month]')!.value).toBe('2027-01')
+ expect(document.body.textContent).not.toContain('gasto(s) registrado(s)')
+ expect(formatExpenseMonth('2026-10')).toBe('Outubro de 2026')
+})
+it.each([[1266,4000,'31,65%',2734,false],[4500,4000,'112,5%',500,true],[0,0,null,0,false],[10,0,null,0,false]])('presents monthly budget %s/%s without artificial percentages',async(spent,budget,percent,remaining,over)=>{
+ await act(()=>root.render(<MonthlyBudgetProgress spent={spent as number} budget={budget as number}/>))
+ const bar=host.querySelector('[role=progressbar]')
+ if(percent) {expect(host.textContent).toContain(percent);expect(Number(bar?.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(100);expect(host.textContent).toContain(over?'Excedido':'Disponível');expect(host.textContent).toContain(remaining.toLocaleString('pt-BR',{minimumFractionDigits:2}))}
+ else {expect(bar).toBeNull();expect(host.textContent).toContain('Sem orçamento definido');expect(host.textContent).not.toContain('%')}
+ expect(host.querySelector('.is-over')!==null).toBe(over)
 })
